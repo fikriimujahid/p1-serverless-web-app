@@ -1,0 +1,5 @@
+project                 = "notesapp"
+aws_region             = "us-east-1"
+terraform_state_bucket = "notesapp-terraform-state-fikri"
+terraform_locks_table  = "notesapp-terraform-locks"
+github_repo            = "your-username/p1-serverless-web-app"

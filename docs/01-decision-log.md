@@ -162,6 +162,19 @@ Explicitly excluded:
 
 ---
 
+### D-011: DNS & Custom Domain Strategy
+
+| Field          | Description                                         |
+| -------------- | --------------------------------------------------- |
+| **Context**    | Enable custom user-friendly domains with HTTPS      |
+| **Options**    | Default AWS URLs, External DNS, Route53 + ACM       |
+| **Chosen**     | **Route53 (DNS) + AWS Certificate Manager (HTTPS)** |
+| **Why**        | Native integration with CloudFront/APIGW; automated cert rotation |
+| **Trade-offs** | Slight cost for Hosted Zone; requires domain ownership |
+| **Status**     | Approved                                            |
+
+---
+
 ## Deferred Decisions (Out of Phase 1)
 
 The following decision areas are intentionally deferred to later phases:

@@ -7,7 +7,7 @@ This document outlines the Infrastructure-as-Code (IaC) strategy, environment se
 
 ## Executive Summary
 
-The infrastructure is built using **Terraform** for cloud resources and **SAM (Serverless Application Model)** for serverless-specific resources. This dual-tool approach provides clarity and separation of concerns while maintaining consistency across dev, staging, and prod environments.
+The infrastructure is built using **Terraform** for cloud resources and **SAM (Serverless Application Model)** for serverless-specific resources. This dual-tool approach provides clarity and separation of concerns while maintaining consistency across dev, staging, and prod environments. The foundation includes networking (CDN), storage, compute, and security layers.
 
 ---
 
@@ -114,6 +114,37 @@ dev → staging → prod
 
 **Storage Location:** `infra/terraform/envs/<env>.tfvars`
 
+### Networking & Content Delivery
+
+Although this architecture is serverless (No-VPC), a networking layer is implemented to route traffic securely to application endpoints.
+
+| Component | Service | Role |
+| ~ | ~ | ~ |
+| **Global CDN** | Amazon CloudFront | Delivers frontend assets; handles TLS termination for `p1.fikri.dev` |
+| **API Ingress** | Amazon API Gateway | REST API entry point; Custom domain mapping via API Gateway Custom Domains |
+| **DNS** | Amazon Route53 | Managed Hosted Zone (`fikri.dev`) handling DNS routing for subdomains |
+| **SSL/TLS** | AWS Certificate Manager | Use existing public certificate for `p1.fikri.dev` (CloudFront) |
+
+**Networking Flow (with Custom Domain):**
+```
+User -> p1.fikri.dev (Route53 Alias) -> CloudFront -> S3 Bucket
+User -> api.p1.fikri.dev (Route53 Alias) -> API Gateway -> Lambda Function
+```
+
+**Domain Strategy:**
+* **Root Domain:** `fikri.dev` (Hosted Zone)
+* **Environment Mapping:**
+    * **dev:** `p1-dev.fikri.dev` (Frontend), `api.p1-dev.fikri.dev` (Backend)
+    * **staging:** `p1-sta.fikri.dev` (Frontend), `api.p1-sta.fikri.dev` (Backend)
+    * **prod:** `p1.fikri.dev` (Frontend), `api.p1.fikri.dev` (Backend)
+* **HTTPS:** Enforced via existing ACM Certificates.
+
+**Networking Flow:**
+```
+User -> CloudFront (Frontend) -> S3 Bucket
+User -> API Gateway (Backend) -> Lambda Function
+```
+
 ---
 
 ## 3. State Management Strategy
@@ -196,7 +227,11 @@ infra/terraform/
     │   ├── main.tf
     │   ├── variables.tf
     │   └── outputs.tf
-    └── security/
+    ├── security/
+        │   ├── main.tf
+        │   ├── variables.tf
+        │   └── outputs.tf
+    └── hosting/
         ├── main.tf
         ├── variables.tf
         └── outputs.tf
@@ -211,6 +246,7 @@ infra/terraform/
 | compute    | Lambda execution environment, API Gateway              |
 | auth       | Cognito user pools, authentication                     |
 | security   | Encryption, secrets management, key policies           |
+| hosting    | S3 website buckets, CloudFront distribution, OAC       |
 
 ---
 
@@ -338,14 +374,33 @@ infra/terraform/
 
 ---
 
+---
+
+## 9. IAM Role Responsibility Matrix
+
+As defined in `guide/step.md`, the IAM role responsibility identification is a core Phase 2 output. Use the dedicated IAM documentation for the detailed matrix.
+
+**Reference:** [docs/02-iam.md](./02-iam.md)
+
+**Summary of Defined Roles:**
+1. **DeveloperRole:** Local dev/test permissions
+2. **DeploymentRole:** CI/CD pipeline power-user
+3. **ProductionAdminRole:** Emergency break-glass role
+4. **LambdaExecutionRole:** Application runtime identity
+5. **CognitoServiceRole:** Auth triggering identity
+
+---
+
 ## Phase 2 Review Checklist
 
-* Are all three environments clearly separated?
-* Can infrastructure be destroyed and recreated identically?
-* Are sensitive values protected from state files?
-* Can state corruption be recovered from backups?
-* Are cost controls in place?
-* Can infrastructure changes be reviewed before application?
+* [ ] Networking elements (CloudFront, API Gateway) defined?
+* [ ] Frontend hosting infrastructure (S3) included in designs?
+* [ ] Are all three environments clearly separated?
+* [ ] Can infrastructure be destroyed and recreated identically?
+* [ ] Are sensitive values protected from state files?
+* [ ] Can state corruption be recovered from backups?
+* [ ] Are cost controls in place?
+* [ ] Can infrastructure changes be reviewed before application?
 
 ---
 

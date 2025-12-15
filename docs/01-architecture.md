@@ -47,6 +47,7 @@ The system adopts a **serverless, AWS-native architecture** optimized for low op
 | Database         | Amazon DynamoDB           | Serverless, highly scalable, low operational cost |
 | Authentication   | Amazon Cognito User Pools | Built-in user management, JWT-based               |
 | Frontend Hosting | Amazon S3 + CloudFront    | Serverless static hosting, global CDN             |
+| DNS & SSL        | Route53 + ACM             | Custom domain management (p1.fikri.dev) & HTTPS   |
 
 ---
 
