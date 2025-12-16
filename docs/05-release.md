@@ -1,8 +1,8 @@
-## PHASE 2 — Release Process & Rollback
+## PHASE 5 — Release Process & Rollback
 
 ### Purpose
 
-Define a simple, auditable release process and clear rollback steps for the Serverless Personal Notes application. This process assumes CI pipelines described in `docs/02-cicd.md`.
+Define a simple, auditable release process and clear rollback steps for the Serverless Personal Notes application. This process assumes CI pipelines described in `docs/05-cicd.md`.
 
 ### Principles
 
@@ -91,5 +91,5 @@ Rollback steps (fast path):
 
 **Playbook Links**
 
-- CI/CD implementation: [docs/02-cicd.md](docs/02-cicd.md)
+- CI/CD implementation: [docs/05-cicd.md](docs/05-cicd.md)
 - Infra environment/state: `infra/terraform/environments/`

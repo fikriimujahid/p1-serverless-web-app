@@ -6,7 +6,7 @@
 2. `gh` (GitHub CLI) installed and authenticated: `gh auth login`.
 3. Repo already exists (or create it): `gh repo create <owner>/<repo>`.
 4. AWS bootstrap outputs available (see `guide/03-1-terraform-setup.md`): OIDC provider ARN and role ARNs created by Terraform.
-5. Project docs present: `docs/02-cicd.md` and `docs/02-release.md` (used as policy references).
+5. Project docs present: `docs/05-cicd.md` and `docs/05-release.md` (used as policy references).
 
 ---
 
@@ -97,7 +97,7 @@ Refer to `guide/03-1-terraform-setup.md` for automated role and OIDC provider cr
 
 ## 5. Add Workflows (CI + Deploy + Release)
 
-Purpose: implement the logical pipeline stages from `docs/02-cicd.md` (validate, test, build, package, deploy, smoke).
+Purpose: implement the logical pipeline stages from `docs/05-cicd.md` (validate, test, build, package, deploy, smoke).
 
 Recommended workflow files (examples):
 
@@ -161,7 +161,7 @@ git push origin v1.2.3
 gh release create v1.2.3 --notes "Release notes summary"
 ```
 
-2. Ensure release workflow attaches pipeline run ID and PR links in release notes (see `docs/02-release.md`).
+2. Ensure release workflow attaches pipeline run ID and PR links in release notes (see `docs/05-release.md`).
 
 ---
 
@@ -200,7 +200,7 @@ gh run view RUN_ID --repo OWNER/REPO --log
 
 ## 10. Playbook / Next Steps
 
-- Document workflow filenames under `.github/workflows/` and link to `docs/02-cicd.md` for pipeline contract.
+- Document workflow filenames under `.github/workflows/` and link to `docs/05-cicd.md` for pipeline contract.
 - Use `guide/03-1-terraform-setup.md` to re-run bootstrap and re-create IAM/OIDC tooling as needed.
 - Optional: create prepared GitHub Actions templates and store them under `.github/` for reuse.
 
@@ -219,6 +219,6 @@ gh run view RUN_ID --repo OWNER/REPO --log
 
 References:
 
-- CI/CD design: [docs/02-cicd.md](docs/02-cicd.md)
-- Release & rollback: [docs/02-release.md](docs/02-release.md)
+- CI/CD design: [docs/05-cicd.md](docs/05-cicd.md)
+- Release & rollback: [docs/05-release.md](docs/05-release.md)
 - Terraform bootstrap: `guide/03-1-terraform-setup.md`

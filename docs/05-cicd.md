@@ -1,4 +1,4 @@
-## PHASE 2 — CI/CD & Branching
+## PHASE 5 — CI/CD & Branching
 
 ### Purpose
 
