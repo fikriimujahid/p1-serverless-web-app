@@ -422,9 +422,7 @@ terraform apply
 Review the plan and type `yes` to confirm.
 
 ---
-
 # PHASE 4: Staging Environment Setup (Optional)
-
 If you need a staging environment for pre-production testing, follow the same structure as dev:
 
 ## 4.1: Create Staging Directory

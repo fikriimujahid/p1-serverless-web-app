@@ -1,4 +1,4 @@
-# PHASE 2 — Infrastructure as Code (Foundation)
+# PHASE 3 — Infrastructure as Code (Foundation)
 
 **Purpose of this document**
 This document outlines the Infrastructure-as-Code (IaC) strategy, environment separation model, and state management approach for the serverless personal notes application. It provides the foundational infrastructure design that will be implemented in Phase 2.

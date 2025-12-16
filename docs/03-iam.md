@@ -1,7 +1,7 @@
-# PHASE 2 — IAM Security & Access Control
+# PHASE 3 — IAM Security & Access Control
 
 **Purpose of this document**
-This document defines the Identity and Access Management (IAM) strategy, including role definitions, permission boundaries, and risk assessment. It provides the foundational security model that will be implemented in Phase 2.
+This document defines the Identity and Access Management (IAM) strategy, including role definitions, permission boundaries, and risk assessment. It provides the foundational security model that will be implemented in Phase 3.
 
 ---
 

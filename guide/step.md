@@ -54,7 +54,37 @@
 
 ---
 
-## 🔹 PHASE 2 — Infrastructure as Code (Foundation)
+## 🔹 PHASE 2 — CI/CD & Branching
+
+### What you do
+
+* Define branch strategy
+* Build pipelines
+* Secure deployments
+
+### Outputs
+
+📄 **`docs/02-cicd.md`**
+
+* Branching strategy diagram
+* Pipeline stages
+* Environment mapping
+
+📁 **`.github/workflows/`** or **`.gitlab-ci.yml`**
+
+📄 **`docs/02-release.md`**
+
+* Release process
+* Rollback steps
+
+✅ Review questions:
+
+* Can I deploy safely on Friday?
+* Is prod protected?
+
+---
+
+## 🔹 PHASE 3 — Infrastructure as Code (Foundation)
 
 ### What you do
 
@@ -70,13 +100,13 @@
 * Terraform modules
 * Environment configs
 
-📄 **`docs/02-infra.md`**
+📄 **`docs/03-infra.md`**
 
 * Environment separation model
 * State management strategy
 * IAM role responsibility matrix
 
-📄 **`docs/02-iam.md`**
+📄 **`docs/03-iam.md`**
 | Role | Used by | Permissions | Risk |
 
 ✅ Review questions:
@@ -86,7 +116,7 @@
 
 ---
 
-## 🔹 PHASE 3 — Backend Implementation
+## 🔹 PHASE 4 — Backend Implementation
 
 ### What you do
 
@@ -101,13 +131,13 @@
 * Clean project structure
 * README with run instructions
 
-📄 **`docs/03-api.md`**
+📄 **`docs/04-api.md`**
 
 * API endpoints
 * Request/response examples
 * Error codes
 
-📄 **`docs/03-backend-design.md`**
+📄 **`docs/04-backend-design.md`**
 
 * Folder structure explanation
 * Design patterns used
@@ -119,7 +149,7 @@
 
 ---
 
-## 🔹 PHASE 4 — Security & DevSecOps
+## 🔹 PHASE 5 — Security & DevSecOps
 
 ### What you do
 
@@ -129,20 +159,20 @@
 
 ### Outputs
 
-📄 **`docs/04-security.md`**
+📄 **`docs/05-security.md`**
 
 * Threat model (simple)
 * Auth flow diagram
 * Encryption model
 
-📄 **`docs/04-devsecops.md`**
+📄 **`docs/05-devsecops.md`**
 
 | Layer      | Tool                | Purpose       |
 | ---------- | ------------------- | ------------- |
 | Pre-commit | detect-secrets      | Prevent leaks |
 | CI         | IAM role assumption | Secure deploy |
 
-📄 **`docs/04-dr.md`**
+📄 **`docs/05-dr.md`**
 
 * Backup scope
 * Restore steps
@@ -152,36 +182,6 @@
 
 * What happens if data is deleted?
 * Can I explain this to a security reviewer?
-
----
-
-## 🔹 PHASE 5 — CI/CD & Branching
-
-### What you do
-
-* Define branch strategy
-* Build pipelines
-* Secure deployments
-
-### Outputs
-
-📄 **`docs/05-cicd.md`**
-
-* Branching strategy diagram
-* Pipeline stages
-* Environment mapping
-
-📁 **`.github/workflows/`** or **`.gitlab-ci.yml`**
-
-📄 **`docs/05-release.md`**
-
-* Release process
-* Rollback steps
-
-✅ Review questions:
-
-* Can I deploy safely on Friday?
-* Is prod protected?
 
 ---
 
