@@ -8,27 +8,25 @@ terraform {
   }
 
   backend "s3" {
-    # Configure in backend.hcl
+    # Configuration loaded from backend.hcl
   }
 }
 
 provider "aws" {
-  region = var.aws_region
+  region  = var.aws_region
+  profile = "terraform-dev"
 
-  assume_role {
-    role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/TerraformDevRole"
+  default_tags {
+    tags = {
+      project     = var.project
+      environment = var.environment
+      managed_by  = "terraform"
+    }
   }
 }
 
-data "aws_caller_identity" "current" {}
-
+# Add your development infrastructure resources here
 # Example resource with mandatory tags
 resource "aws_s3_bucket" "example" {
   bucket = "${var.project}-${var.environment}-example-bucket"
-
-  tags = {
-    project     = var.project
-    environment = var.environment
-    managed_by  = "terraform"
-  }
 }

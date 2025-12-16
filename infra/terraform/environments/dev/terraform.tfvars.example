@@ -1,0 +1,5 @@
+project                 = "p1-serverless-web-app"
+environment            = "dev"
+aws_region             = "us-east-1"
+terraform_state_bucket = "p1-serverless-web-app-terraform-state-fikri"
+terraform_locks_table  = "p1-serverless-web-app-terraform-locks"

@@ -1,11 +1,11 @@
 variable "project" {
   description = "Project name"
   type        = string
-  default     = "notesapp"
+  default     = "p1-serverless-web-app"
 }
 
 variable "environment" {
-  description = "Environment (dev, staging, prod)"
+  description = "Environment name"
   type        = string
   default     = "dev"
 }
