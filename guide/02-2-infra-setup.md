@@ -36,7 +36,6 @@ mkdir infra\terraform\modules\auth
 mkdir infra\terraform\modules\security
 mkdir infra\terraform\modules\hosting
 ```
-
 ## Step 2: Implement IAM Module
 
 ### Create `infra/terraform/modules/iam/main.tf`
@@ -155,11 +154,8 @@ output "cognito_service_role_arn" {
   value       = aws_iam_role.cognito_service_role.arn
 }
 ```
-
 ## Step 3: Implement Database Module
-
 ### Create `infra/terraform/modules/database/main.tf`
-
 ```hcl
 # Notes DynamoDB Table
 resource "aws_dynamodb_table" "notes_table" {
@@ -202,9 +198,7 @@ resource "aws_dynamodb_table" "notes_table" {
   })
 }
 ```
-
 ### Create `infra/terraform/modules/database/variables.tf`
-
 ```hcl
 variable "project" {
   description = "Project name"
@@ -222,9 +216,7 @@ variable "tags" {
   default     = {}
 }
 ```
-
 ### Create `infra/terraform/modules/database/outputs.tf`
-
 ```hcl
 output "notes_table_name" {
   description = "Name of the notes DynamoDB table"
@@ -236,11 +228,8 @@ output "notes_table_arn" {
   value       = aws_dynamodb_table.notes_table.arn
 }
 ```
-
 ## Step 4: Implement Auth Module
-
 ### Create `infra/terraform/modules/auth/main.tf`
-
 ```hcl
 # Cognito User Pool
 resource "aws_cognito_user_pool" "notes_user_pool" {
@@ -287,9 +276,7 @@ resource "aws_cognito_user_pool_client" "notes_user_pool_client" {
   supported_identity_providers = ["COGNITO"]
 }
 ```
-
 ### Create `infra/terraform/modules/auth/variables.tf`
-
 ```hcl
 variable "project" {
   description = "Project name"
@@ -307,9 +294,7 @@ variable "tags" {
   default     = {}
 }
 ```
-
 ### Create `infra/terraform/modules/auth/outputs.tf`
-
 ```hcl
 output "user_pool_id" {
   description = "ID of the Cognito User Pool"
@@ -326,11 +311,8 @@ output "user_pool_arn" {
   value       = aws_cognito_user_pool.notes_user_pool.arn
 }
 ```
-
 ## Step 5: Implement Hosting Module
-
 ### Create `infra/terraform/modules/hosting/main.tf`
-
 ```hcl
 # S3 Bucket for Frontend Hosting
 resource "aws_s3_bucket" "frontend_bucket" {
@@ -448,9 +430,7 @@ resource "aws_s3_bucket_policy" "frontend_bucket_policy" {
   })
 }
 ```
-
 ### Create `infra/terraform/modules/hosting/variables.tf`
-
 ```hcl
 variable "project" {
   description = "Project name"
@@ -468,9 +448,7 @@ variable "tags" {
   default     = {}
 }
 ```
-
 ### Create `infra/terraform/modules/hosting/outputs.tf`
-
 ```hcl
 output "frontend_bucket_name" {
   description = "Name of the frontend S3 bucket"
@@ -489,17 +467,16 @@ output "cloudfront_domain_name" {
 ```
 
 ---
-
 # PHASE 2: Environment Configuration
-
 ## Step 6: Create Environment-Specific Configurations
+### Create `infra/terraform/environments/dev` using `terraform.tfvars`
+For environment-specific configuration we recommend using `terraform.tfvars` (and a `terraform.tfvars.example` template) instead of embedding defaults in `variables.tf`. Keep `variables.tf` in the environment directory to *declare* variables (no defaults), then provide concrete values in `terraform.tfvars`.
 
-### Create `infra/terraform/environments/dev/main.tf`
+Create `infra/terraform/environments/dev/main.tf` (backend loaded from `backend.hcl`):
 
 ```hcl
 terraform {
   required_version = ">= 1.5"
-  
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -513,7 +490,8 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region  = var.aws_region
+  profile = "terraform-dev"
 
   default_tags {
     tags = {
@@ -532,7 +510,6 @@ locals {
   }
 }
 
-# IAM Module
 module "iam" {
   source = "../../modules/iam"
 
@@ -541,7 +518,6 @@ module "iam" {
   tags        = local.common_tags
 }
 
-# Database Module
 module "database" {
   source = "../../modules/database"
 
@@ -550,7 +526,6 @@ module "database" {
   tags        = local.common_tags
 }
 
-# Auth Module
 module "auth" {
   source = "../../modules/auth"
 
@@ -559,7 +534,6 @@ module "auth" {
   tags        = local.common_tags
 }
 
-# Hosting Module
 module "hosting" {
   source = "../../modules/hosting"
 
@@ -569,29 +543,53 @@ module "hosting" {
 }
 ```
 
-### Create `infra/terraform/environments/dev/variables.tf`
+Create `infra/terraform/environments/dev/variables.tf` (no defaults here):
 
 ```hcl
 variable "project" {
   description = "Project name"
   type        = string
-  default     = "notesapp"
 }
 
 variable "environment" {
   description = "Environment name"
   type        = string
-  default     = "dev"
 }
 
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "us-east-1"
 }
 ```
 
-### Create `infra/terraform/environments/dev/outputs.tf`
+Create a `terraform.tfvars.example` as your editable template, then copy it to `terraform.tfvars` and update values for your environment.
+### Create `infra/terraform/environments/dev/terraform.tfvars.example`
+```hcl
+project                 = "notesapp"
+environment             = "dev"
+aws_region              = "us-east-1"
+```
+
+Then create the real file by copying the example and editing values locally:
+
+```bash
+cd infra/terraform/environments/dev
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your environment-specific values
+```
+
+Create `infra/terraform/environments/dev/backend.hcl` (backend settings used by `terraform init -backend-config=backend.hcl`):
+
+```hcl
+bucket         = "notesapp-terraform-state-fikri"
+key            = "dev/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "notesapp-terraform-locks"
+encrypt        = true
+profile        = "terraform-dev"
+```
+
+Create `infra/terraform/environments/dev/outputs.tf` to expose module outputs (same as before):
 
 ```hcl
 output "lambda_execution_role_arn" {
@@ -624,17 +622,6 @@ output "cloudfront_domain_name" {
   value       = module.hosting.cloudfront_domain_name
 }
 ```
-
-### Create `infra/terraform/environments/dev/backend.hcl`
-
-```hcl
-bucket         = "notesapp-terraform-state-fikri"
-key            = "dev/terraform.tfstate"
-region         = "us-east-1"
-dynamodb_table = "notesapp-terraform-locks"
-encrypt        = true
-```
-
 ## Step 7: Replicate for Staging and Production
 
 Copy the dev environment structure for staging and prod:
@@ -655,7 +642,6 @@ Update the backend.hcl and variables.tf files for each environment:
 ---
 
 # PHASE 3: Deployment and Validation
-
 ## Step 8: Deploy Development Environment
 
 ```bash
@@ -782,51 +768,3 @@ terraform apply # Should fail with CI/CD protection
 - [ ] Tags applied uniformly
 
 ---
-
-# 🚀 Next Steps
-
-After completing this infrastructure setup:
-
-1. **Phase 3:** Implement Lambda functions and API Gateway
-2. **Phase 4:** Build and deploy the frontend application
-3. **Phase 5:** Set up CI/CD pipelines for automated deployments
-4. **Phase 6:** Implement monitoring and logging
-5. **Phase 7:** Add cost optimization and alerting
-
----
-
-# 🔧 Troubleshooting
-
-## Common Issues
-
-### Terraform State Lock
-
-```bash
-# If state is locked, force unlock (use carefully)
-terraform force-unlock <lock-id>
-```
-
-### IAM Permission Errors
-
-```bash
-# Check current identity
-aws sts get-caller-identity
-
-# Verify role assumptions work
-aws sts assume-role --role-arn <role-arn> --role-session-name test
-```
-
-### Resource Naming Conflicts
-
-```bash
-# If S3 bucket names conflict, update the random suffix
-terraform taint random_string.bucket_suffix
-terraform apply
-```
-
----
-
-**Status:** READY FOR IMPLEMENTATION  
-**Prerequisites:** [02-terraform-setup.md](../guide/02-terraform-setup.md) completed  
-**Next Phase:** Lambda and API Gateway implementation  
-**Last Updated:** 2025-12-14

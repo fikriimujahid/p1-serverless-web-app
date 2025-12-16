@@ -54,37 +54,7 @@
 
 ---
 
-## 🔹 PHASE 2 — CI/CD & Branching
-
-### What you do
-
-* Define branch strategy
-* Build pipelines
-* Secure deployments
-
-### Outputs
-
-📄 **`docs/02-cicd.md`**
-
-* Branching strategy diagram
-* Pipeline stages
-* Environment mapping
-
-📁 **`.github/workflows/`** or **`.gitlab-ci.yml`**
-
-📄 **`docs/02-release.md`**
-
-* Release process
-* Rollback steps
-
-✅ Review questions:
-
-* Can I deploy safely on Friday?
-* Is prod protected?
-
----
-
-## 🔹 PHASE 3 — Infrastructure as Code (Foundation)
+## 🔹 PHASE 2 — Infrastructure as Code (Foundation)
 
 ### What you do
 
@@ -100,13 +70,13 @@
 * Terraform modules
 * Environment configs
 
-📄 **`docs/03-infra.md`**
+📄 **`docs/02-infra.md`**
 
 * Environment separation model
 * State management strategy
 * IAM role responsibility matrix
 
-📄 **`docs/03-iam.md`**
+📄 **`docs/02-iam.md`**
 | Role | Used by | Permissions | Risk |
 
 ✅ Review questions:
@@ -116,7 +86,7 @@
 
 ---
 
-## 🔹 PHASE 4 — Backend Implementation
+## 🔹 PHASE 3 — Backend Implementation
 
 ### What you do
 
@@ -131,13 +101,13 @@
 * Clean project structure
 * README with run instructions
 
-📄 **`docs/04-api.md`**
+📄 **`docs/03-api.md`**
 
 * API endpoints
 * Request/response examples
 * Error codes
 
-📄 **`docs/04-backend-design.md`**
+📄 **`docs/03-backend-design.md`**
 
 * Folder structure explanation
 * Design patterns used
@@ -148,6 +118,36 @@
 * Is it testable?
 
 ---
+## 🔹 PHASE 4 — CI/CD & Branching
+
+### What you do
+
+* Define branch strategy
+* Build pipelines
+* Secure deployments
+
+### Outputs
+
+📄 **`docs/04-cicd.md`**
+
+* Branching strategy diagram
+* Pipeline stages
+* Environment mapping
+
+📁 **`.github/workflows/`** or **`.gitlab-ci.yml`**
+
+📄 **`docs/04-release.md`**
+
+* Release process
+* Rollback steps
+
+✅ Review questions:
+
+* Can I deploy safely on Friday?
+* Is prod protected?
+
+---
+
 
 ## 🔹 PHASE 5 — Security & DevSecOps
 
