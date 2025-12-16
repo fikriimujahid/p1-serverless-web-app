@@ -11,9 +11,7 @@
 ---
 
 ## 1. Repository and Branch Protection
-
 Purpose: prevent direct pushes to `main`, enforce PR reviews and passing checks.
-
 1. Open your repo in GitHub and go to **Settings → Branches → Branch protection rules**.
 2. Add a rule for `main`:
    - Require pull request reviews before merging (include code owners if used).
@@ -23,16 +21,6 @@ Purpose: prevent direct pushes to `main`, enforce PR reviews and passing checks.
 3. Add a rule for `develop`:
    - Require PR reviews and passing CI checks.
    - Allow maintainers to merge if appropriate.
-
-Optional CLI (example):
-
-```bash
-# Protect branch using the REST API (replace OWNER/REPO and BRANCH)
-gh api --method PUT /repos/OWNER/REPO/branches/main/protection -f required_status_checks='{"strict":true,"contexts":[]}' -f enforce_admins=true -f required_pull_request_reviews='{"required_approving_review_count":2}'
-```
-
-Notes:
-- The UI is simpler for one-off configuration; use the API/automation for repeatable setups.
 
 ---
 
