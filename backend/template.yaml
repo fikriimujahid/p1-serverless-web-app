@@ -1,0 +1,134 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Serverless Notes API'
+
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Timeout: 10
+    MemorySize: 256
+    Tracing: Active
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        LOG_LEVEL: INFO
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Environment name
+  
+  DynamoDBTableName:
+    Type: String
+    Description: Name of the existing DynamoDB table created by Terraform
+    Default: p1-notes-dev
+  
+  UserPoolId:
+    Type: String
+    Description: Cognito User Pool ID created by Terraform
+    Default: ''
+
+Resources:
+  # API Gateway
+  NotesApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'notes-api-${Environment}'
+      StageName: !Ref Environment
+      TracingEnabled: true
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !Sub 'arn:aws:cognito-idp:ap-southeast-1:${AWS::AccountId}:userpool/${UserPoolId}'
+            Identity:
+              RevalidateEvery: 3600
+
+  # Read Lambda Function
+  ReadNotesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'notes-read-${Environment}'
+      CodeUri: .
+      Handler: dist/handlers/notes/readHandler.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DynamoDBTableName
+      Events:
+        ListNotes:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotesApi
+            Path: /notes
+            Method: GET
+        GetNote:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotesApi
+            Path: /notes/{id}
+            Method: GET
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DynamoDBTableName
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Environment: !Ref Environment
+
+  # Write Lambda Function
+  WriteNotesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'notes-write-${Environment}'
+      CodeUri: .
+      Handler: dist/handlers/notes/writeHandler.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DynamoDBTableName
+      Events:
+        CreateNote:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotesApi
+            Path: /notes
+            Method: POST
+        UpdateNote:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotesApi
+            Path: /notes/{id}
+            Method: PUT
+        DeleteNote:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotesApi
+            Path: /notes/{id}
+            Method: DELETE
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBTableName
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Environment: !Ref Environment
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${NotesApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+  ApiId:
+    Description: API Gateway ID
+    Value: !Ref NotesApi
+  ReadFunctionName:
+    Description: Read Lambda function name
+    Value: !Ref ReadNotesFunction
+  WriteFunctionName:
+    Description: Write Lambda function name
+    Value: !Ref WriteNotesFunction

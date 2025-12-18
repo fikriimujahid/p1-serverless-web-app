@@ -1,0 +1,464 @@
+{
+  "info": {
+    "_postman_id": "p1-notes-api",
+    "name": "P1 Notes API - Complete",
+    "description": "Complete Notes API with Cognito Authentication (Service API with SigV4)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Cognito Authentication",
+      "description": "Cognito IDP Service API operations (requires AWS Signature auth)",
+      "item": [
+        {
+          "name": "SignUp",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.UserSub) {",
+                  "    pm.environment.set('user_sub', data.UserSub);",
+                  "    console.log('User created: ' + data.UserSub);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-amz-json-1.1"
+              },
+              {
+                "key": "X-Amz-Target",
+                "value": "AWSCognitoIdentityProviderService.SignUp"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ClientId\": \"{{client_id}}\",\n  \"Username\": \"{{username}}\",\n  \"Password\": \"{{password}}\",\n  \"UserAttributes\": [\n    { \"Name\": \"email\", \"Value\": \"{{email}}\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "https://cognito-idp.{{region}}.amazonaws.com/",
+              "protocol": "https",
+              "host": [
+                "cognito-idp.{{region}}.amazonaws.com"
+              ]
+            },
+            "description": "Create a new user account. After signup, user must be confirmed."
+          },
+          "auth": {
+            "type": "awsSigv4",
+            "awsSigv4": [
+              {
+                "key": "accessKey",
+                "value": "{{aws_access_key_id}}",
+                "type": "string"
+              },
+              {
+                "key": "secretKey",
+                "value": "{{aws_secret_access_key}}",
+                "type": "string"
+              },
+              {
+                "key": "region",
+                "value": "{{region}}",
+                "type": "string"
+              },
+              {
+                "key": "service",
+                "value": "cognito-idp",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ConfirmSignUp",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-amz-json-1.1"
+              },
+              {
+                "key": "X-Amz-Target",
+                "value": "AWSCognitoIdentityProviderService.ConfirmSignUp"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ClientId\": \"{{client_id}}\",\n  \"Username\": \"{{username}}\",\n  \"ConfirmationCode\": \"{{confirmation_code}}\"\n}"
+            },
+            "url": {
+              "raw": "https://cognito-idp.{{region}}.amazonaws.com/",
+              "protocol": "https",
+              "host": [
+                "cognito-idp.{{region}}.amazonaws.com"
+              ]
+            },
+            "description": "Confirm user signup with confirmation code from email. Or use AWS CLI: aws cognito-idp admin-confirm-sign-up --user-pool-id [POOL_ID] --username [USERNAME] --region ap-southeast-1"
+          },
+          "auth": {
+            "type": "awsSigv4",
+            "awsSigv4": [
+              {
+                "key": "accessKey",
+                "value": "{{aws_access_key_id}}",
+                "type": "string"
+              },
+              {
+                "key": "secretKey",
+                "value": "{{aws_secret_access_key}}",
+                "type": "string"
+              },
+              {
+                "key": "region",
+                "value": "{{region}}",
+                "type": "string"
+              },
+              {
+                "key": "service",
+                "value": "cognito-idp",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        {
+          "name": "InitiateAuth (Login)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  const result = data.AuthenticationResult || {};",
+                  "  if (result.IdToken) {",
+                  "    pm.environment.set('id_token', result.IdToken);",
+                  "    pm.environment.set('token_expiry', Date.now() + (result.ExpiresIn * 1000));",
+                  "    console.log('Login successful! Token valid for ' + result.ExpiresIn + ' seconds');",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-amz-json-1.1"
+              },
+              {
+                "key": "X-Amz-Target",
+                "value": "AWSCognitoIdentityProviderService.InitiateAuth"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"AuthFlow\": \"USER_PASSWORD_AUTH\",\n  \"ClientId\": \"{{client_id}}\",\n  \"AuthParameters\": {\n    \"USERNAME\": \"{{username}}\",\n    \"PASSWORD\": \"{{password}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "https://cognito-idp.{{region}}.amazonaws.com/",
+              "protocol": "https",
+              "host": [
+                "cognito-idp.{{region}}.amazonaws.com"
+              ]
+            },
+            "description": "Authenticate and get JWT tokens. IdToken is automatically saved to environment."
+          },
+          "auth": {
+            "type": "awsSigv4",
+            "awsSigv4": [
+              {
+                "key": "accessKey",
+                "value": "{{aws_access_key_id}}",
+                "type": "string"
+              },
+              {
+                "key": "secretKey",
+                "value": "{{aws_secret_access_key}}",
+                "type": "string"
+              },
+              {
+                "key": "region",
+                "value": "{{region}}",
+                "type": "string"
+              },
+              {
+                "key": "service",
+                "value": "cognito-idp",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notes API",
+      "description": "Notes CRUD operations (requires valid IdToken from Cognito)",
+      "item": [
+        {
+          "name": "List Notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api_url}}/notes?limit=20",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notes"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get all notes for authenticated user"
+          }
+        },
+        {
+          "name": "Create Note",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) {",
+                  "    pm.environment.set('note_id', data.id);",
+                  "    console.log('Note created: ' + data.id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My First Note\",\n  \"content\": \"This is my note content\",\n  \"tags\": [\"important\", \"todo\"]\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/notes",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notes"
+              ]
+            },
+            "description": "Create a new note (title and content required)"
+          }
+        },
+        {
+          "name": "Get Note by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api_url}}/notes/{{note_id}}",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notes",
+                "{{note_id}}"
+              ]
+            },
+            "description": "Get a specific note by ID"
+          }
+        },
+        {
+          "name": "Update Note",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\",\n  \"content\": \"Updated content here\"\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/notes/{{note_id}}",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notes",
+                "{{note_id}}"
+              ]
+            },
+            "description": "Update an existing note (partial updates supported)"
+          }
+        },
+        {
+          "name": "Delete Note",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api_url}}/notes/{{note_id}}",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notes",
+                "{{note_id}}"
+              ]
+            },
+            "description": "Delete a note by ID"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Check if token is still valid",
+          "const tokenExpiry = pm.environment.get('token_expiry');",
+          "if (tokenExpiry && tokenExpiry > Date.now()) {",
+          "  // Token still valid",
+          "  return;",
+          "}",
+          "// Token missing or expired",
+          "console.log('Token missing or expired. Please run InitiateAuth (Login) first.');"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "region",
+      "value": "ap-southeast-1",
+      "type": "string"
+    },
+    {
+      "key": "user_pool_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "client_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "test-user",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "TestPassword123!",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "test-user@example.com",
+      "type": "string"
+    },
+    {
+      "key": "confirmation_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aws_access_key_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aws_secret_access_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aws_session_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "api_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_sub",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "note_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_expiry",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

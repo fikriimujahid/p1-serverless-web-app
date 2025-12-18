@@ -1,3 +1,6 @@
+# Get current AWS region
+data "aws_region" "current" {}
+
 resource "aws_cognito_user_pool" "main" {
   name = "${var.project}-${var.environment}-user-pool"
 
