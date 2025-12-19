@@ -94,12 +94,28 @@ Resources:
         Variables:
           TABLE_NAME: !Ref DynamoDBTableName
       Events:
+        NotesOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotesApi
+            Path: /notes
+            Method: OPTIONS
+            Auth:
+              Authorizer: NONE
         CreateNote:
           Type: Api
           Properties:
             RestApiId: !Ref NotesApi
             Path: /notes
             Method: POST
+        NoteByIdOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotesApi
+            Path: /notes/{id}
+            Method: OPTIONS
+            Auth:
+              Authorizer: NONE
         UpdateNote:
           Type: Api
           Properties:

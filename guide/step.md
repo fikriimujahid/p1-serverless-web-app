@@ -118,74 +118,8 @@
 * Is it testable?
 
 ---
-## 🔹 PHASE 4 — CI/CD & Branching
 
-### What you do
-
-* Define branch strategy
-* Build pipelines
-* Secure deployments
-
-### Outputs
-
-📄 **`docs/04-cicd.md`**
-
-* Branching strategy diagram
-* Pipeline stages
-* Environment mapping
-
-📁 **`.github/workflows/`** or **`.gitlab-ci.yml`**
-
-📄 **`docs/04-release.md`**
-
-* Release process
-* Rollback steps
-
-✅ Review questions:
-
-* Can I deploy safely on Friday?
-* Is prod protected?
-
----
-
-
-## 🔹 PHASE 5 — Security & DevSecOps
-
-### What you do
-
-* Add security scanning
-* Secret management
-* Implement DR mechanisms
-
-### Outputs
-
-📄 **`docs/05-security.md`**
-
-* Threat model (simple)
-* Auth flow diagram
-* Encryption model
-
-📄 **`docs/05-devsecops.md`**
-
-| Layer      | Tool                | Purpose       |
-| ---------- | ------------------- | ------------- |
-| Pre-commit | detect-secrets      | Prevent leaks |
-| CI         | IAM role assumption | Secure deploy |
-
-📄 **`docs/05-dr.md`**
-
-* Backup scope
-* Restore steps
-* RPO/RTO
-
-✅ Review questions:
-
-* What happens if data is deleted?
-* Can I explain this to a security reviewer?
-
----
-
-## 🔹 PHASE 6 — Frontend Implementation
+## 🔹 PHASE 4 — Frontend Implementation
 
 ### What you do
 
@@ -200,13 +134,13 @@
 * Clean structure
 * Env-based config
 
-📄 **`docs/06-frontend.md`**
+📄 **`docs/04-frontend.md`**
 
 * Auth flow
 * API integration
 * Build & deploy steps
 
-📄 **`docs/06-ui-decisions.md`**
+📄 **`docs/04-ui-decisions.md`**
 
 * Framework choice
 * Trade-offs
@@ -215,6 +149,72 @@
 
 * Can backend change without breaking UI?
 * Is auth handled securely?
+
+---
+
+## 🔹 PHASE 5 — CI/CD & Branching
+
+### What you do
+
+* Define branch strategy
+* Build pipelines
+* Secure deployments
+
+### Outputs
+
+📄 **`docs/05-cicd.md`**
+
+* Branching strategy diagram
+* Pipeline stages
+* Environment mapping
+
+📁 **`.github/workflows/`** or **`.gitlab-ci.yml`**
+
+📄 **`docs/05-release.md`**
+
+* Release process
+* Rollback steps
+
+✅ Review questions:
+
+* Can I deploy safely on Friday?
+* Is prod protected?
+
+---
+
+## 🔹 PHASE 6 — Security & DevSecOps
+
+### What you do
+
+* Add security scanning
+* Secret management
+* Implement DR mechanisms
+
+### Outputs
+
+📄 **`docs/06-security.md`**
+
+* Threat model (simple)
+* Auth flow diagram
+* Encryption model
+
+📄 **`docs/06-devsecops.md`**
+
+| Layer      | Tool                | Purpose       |
+| ---------- | ------------------- | ------------- |
+| Pre-commit | detect-secrets      | Prevent leaks |
+| CI         | IAM role assumption | Secure deploy |
+
+📄 **`docs/06-dr.md`**
+
+* Backup scope
+* Restore steps
+* RPO/RTO
+
+✅ Review questions:
+
+* What happens if data is deleted?
+* Can I explain this to a security reviewer?
 
 ---
 
