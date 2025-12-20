@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import LoginPage from './login/page';
@@ -18,7 +18,6 @@ vi.mock('next/navigation', () => ({
 
 describe('LoginPage', () => {
   const mockLogin = vi.fn();
-  const mockRouter = { push: vi.fn() };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -32,7 +31,7 @@ describe('LoginPage', () => {
       logout: vi.fn(),
       isLoading: false,
       idToken: null,
-    } as any);
+    } as ReturnType<typeof authLib.useAuth>);
   });
 
   it('renders login form elements', () => {
@@ -92,7 +91,7 @@ describe('LoginPage', () => {
       logout: vi.fn(),
       isLoading: true,
       idToken: null,
-    } as any);
+    } as ReturnType<typeof authLib.useAuth>);
 
     render(<LoginPage />);
     

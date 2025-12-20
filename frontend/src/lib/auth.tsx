@@ -16,7 +16,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: env.region });
 
-function decodeJWT(token: string): Record<string, any> {
+function decodeJWT(token: string): Record<string, unknown> {
   const base64Url = token.split('.')[1];
   const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
   const jsonPayload = decodeURIComponent(
