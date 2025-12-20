@@ -16,6 +16,27 @@ vi.mock('next/link', () => {
   };
 });
 
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+// Mock auth
+vi.mock('@/lib/auth', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    isLoading: false,
+    user: null,
+    idToken: null,
+    login: vi.fn(),
+    signup: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
+
 describe('NotesPage', () => {
   const mockNotes = [
     {
