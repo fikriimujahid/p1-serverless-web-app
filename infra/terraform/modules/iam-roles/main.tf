@@ -5,7 +5,10 @@ locals {
     "repo:${var.github_repo}:ref:refs/heads/dev",
     "repo:${var.github_repo}:ref:refs/heads/staging",
     "repo:${var.github_repo}:ref:refs/heads/main",
-    "repo:${var.github_repo}:pull_request"
+    "repo:${var.github_repo}:pull_request",
+    "repo:${var.github_repo}:environment:dev",
+    "repo:${var.github_repo}:environment:staging",
+    "repo:${var.github_repo}:environment:prod"
   ]
 }
 

@@ -65,9 +65,11 @@ This document is a step-by-step guide to stand up CI/CD and branching for this p
 Create `.github/workflows/` with these files:
 
 1. `backend-ci.yml` — lint, typecheck, unit tests for `backend/`
-2. `frontend-ci.yml` — lint, typecheck, unit tests for `frontend/`
-3. `infra-plan-apply.yml` — Terraform/SAM plan+apply gated by environment
-4. `release.yml` — cut tags/releases from `main`, post-deploy smoke
+2. `backend-deploy.yml` — deploy SAM backend on push to `dev`/`staging`/`main`
+3. `frontend-ci.yml` — lint, typecheck, unit tests for `frontend/`
+4. `frontend-deploy.yml` — build and sync static site to S3 on push to `dev`/`staging`/`main`
+5. `infra-plan-apply.yml` — Terraform plan/apply gated by environment
+6. `release.yml` — cut tags/releases from `main`, post-deploy smoke
 
 ---
 ## 5) Backend CI (backend-ci.yml)
@@ -101,6 +103,66 @@ jobs:
 ```
 
 ---
+## 5.1) Backend Deploy (backend-deploy.yml)
+Deploy backend changes automatically to the corresponding environment on merge:
+- Push to `dev` → deploys to dev
+- Push to `staging` → deploys to staging
+- Push to `main` → deploys to prod (respects GitHub Environment approvals)
+
+```yaml
+name: Backend Deploy
+on:
+  push:
+    branches: [dev, staging, main]
+    paths: ["backend/**"]
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+concurrency:
+  group: backend-${{ github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ github.ref_name == 'main' && secrets.AWS_PROD_ROLE_ARN || (github.ref_name == 'staging' && secrets.AWS_STAGING_ROLE_ARN || secrets.AWS_DEV_ROLE_ARN) }}
+      - uses: aws-actions/setup-sam@v2
+      - run: npm ci
+      - run: npm run build
+      - run: sam build
+      - name: Deploy backend (SAM)
+        env:
+          ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
+        run: |
+          sam deploy \
+            --stack-name "${{ env.PROJECT_NAME }}-${ENV_NAME}" \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides Environment=${ENV_NAME}
+```
+
+Notes:
+- Uses GitHub OIDC to assume `${AWS_*_ROLE_ARN}` per target branch.
+- Requires `AWS_REGION` and `PROJECT_NAME` secrets.
+- Respects GitHub Environment approvals (e.g., prod).
+
+---
 ## 6) Frontend CI (frontend-ci.yml)
 **Triggers:** PR to `staging` and `main`; push to `feature/*`.
 
@@ -130,6 +192,68 @@ jobs:
       - run: npm run lint
       - run: npm test -- --runInBand
 ```
+
+---
+## 6.1) Frontend Deploy (frontend-deploy.yml)
+Deploy frontend automatically as a static export (Next.js `output: 'export'`) to S3:
+- Push to `dev` → sync to `${PROJECT_NAME}-dev-web`
+- Push to `staging` → sync to `${PROJECT_NAME}-staging-web`
+- Push to `main` → sync to `${PROJECT_NAME}-prod-web` (respects approvals)
+
+```yaml
+name: Frontend Deploy
+on:
+  push:
+    branches: [dev, staging, main]
+    paths: ["frontend/**"]
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+concurrency:
+  group: frontend-${{ github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ github.ref_name == 'main' && secrets.AWS_PROD_ROLE_ARN || (github.ref_name == 'staging' && secrets.AWS_STAGING_ROLE_ARN || secrets.AWS_DEV_ROLE_ARN) }}
+      - name: Install deps
+        run: npm ci
+      - name: Build static site
+        run: npm run build
+      - name: Sync to S3
+        env:
+          ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
+        run: |
+          aws s3 sync out s3://${{ env.PROJECT_NAME }}-${ENV_NAME}-web --delete
+      - name: Optional CloudFront invalidation
+        env:
+          ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
+          CF_DIST_ID: ${{ github.ref_name == 'main' && secrets.CF_DIST_ID_PROD || (github.ref_name == 'staging' && secrets.CF_DIST_ID_STAGING || secrets.CF_DIST_ID_DEV) }}
+        if: env.CF_DIST_ID != ''
+        run: |
+          aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" --paths "/*"
+```
+
+Notes:
+- Buckets `${PROJECT_NAME}-{env}-web` must exist (provisioned by infra).
+- Optional CloudFront distribution IDs can be provided via `CF_DIST_ID_DEV|STAGING|PROD` secrets.
 
 ---
 ## 7) Infra Plan/Apply (infra-plan-apply.yml)
@@ -246,6 +370,8 @@ jobs:
           curl -f ${{ secrets.API_BASE_URL }}/notes || exit 1
 ```
 
+Note: Regular merges auto-deploy via the dedicated backend/frontend deploy workflows. Use `release.yml` to cut versioned releases/tags and perform coordinated deploys.
+
 ---
 ## 9) Day-2 Operations
 
@@ -264,3 +390,11 @@ jobs:
 - CI passes for backend and frontend
 - Terraform plans visible in PRs; applies gated by environment
 - Release workflow can deploy to staging, then prod after approval
+
+---
+
+## 11) FAQ — Separate CI and Deploy workflows?
+
+- Separate files recommended: Keep `backend-ci.yml`/`frontend-ci.yml` (PR checks) separate from `backend-deploy.yml`/`frontend-deploy.yml` (post-merge deploys). This improves clarity, least-privilege permissions, and avoids deploy jobs appearing as required PR checks.
+- Can be combined: You can place CI and deploy jobs in a single workflow with `on: [pull_request, push]` and guard deploy jobs with `if: github.event_name == 'push'`. If you do this, ensure branch protections only require the CI jobs, not the deploy ones, and set job-level permissions so CI doesn’t request AWS creds.
+- Recommendation: Use separate workflows unless you have a strong reason to unify, especially when prod uses GitHub Environment approvals.

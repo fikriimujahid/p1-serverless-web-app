@@ -4,12 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc", 
     "dev": "ts-node src/index.ts",
     "test": "jest",
     "sam:build": "npm run build && sam build",
     "sam:local": "npm run build && sam local start-api --env-vars env.json --port 3001",
-    "sam:deployfirst": "npm run sam:build && sam deploy --parameter-overrides \"DynamoDBTableName=p1-serverless-web-app-dev-notes UserPoolId=ap-southeast-1_4AGbojAKh\" --guided --profile terraform-dev",
+    "sam:deployfirst": "npm run sam:build && sam deploy --parameter-overrides \"DynamoDBTableName=p1-serverless-web-app-dev-notes UserPoolId=ap-southeast-1_XYJ0KbfqH\" --guided --profile terraform-dev",
     "sam:deploy": "npm run sam:build && sam deploy --profile terraform-dev",
     "sam:delete": "sam delete --stack-name p1-api-stack-dev --profile terraform-dev",
     "clean": "rm -rf dist"
