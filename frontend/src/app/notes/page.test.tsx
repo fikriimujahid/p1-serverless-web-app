@@ -51,14 +51,11 @@ describe('NotesPage', () => {
       isCreating: false,
       updateNote: vi.fn(),
       isUpdating: false,
-      createNote: vi.fn(),
-      isCreating: false,
-      updateNote: vi.fn(),
-      isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: false,
     } as ReturnType<typeof useNotesHook.useNotes>);
-    expect(spinner).toBeInTheDocument();
+    render(<NotesPage />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
   it('displays error message when error occurs', () => {

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
+    "test:serial": "vitest --reporter=verbose",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
   },
