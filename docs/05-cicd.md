@@ -14,23 +14,39 @@ This document is a step-by-step guide to stand up CI/CD and branching for this p
 
 **Environment mapping:**
 
-| Branch    | Environment | Deploys To | Notes |
-| --------- | ----------- | ---------- | ----- |
-| main      | prod        | prod AWS account/env (tags `Environment=prod`) | Requires approval before apply
-| staging   | staging     | staging env (tags `Environment=staging`) | Auto deploy after PR merge
-| dev       | dev         | dev env (tags `Environment=dev`) | Auto deploy after push
-| feature/* | (dev)       | dev env (tags `Environment=dev`) | CI only; branch off `dev`
+| Branch    | Environment | Push | Merge PR | Notes |
+| --------- | ----------- | ---- | -------- | ----- |
+| main      | prod        | ❌ blocked | ✓ apply to prod (requires approval) | Production; most protected
+| staging   | staging     | ❌ blocked | ✓ auto-apply to staging | Pre-prod; protected
+| dev       | dev         | ❌ blocked | ✓ auto-apply to dev | Development; protected
+| feature/* | dev         | ✓ allowed | → PR to dev/staging/main | Short-lived; no protection
 
----
-## 2) Prerequisites
-- GitHub repository created (private recommended)
-- AWS IAM roles per env with least-privilege access to Terraform state, SAM deploy, and CI artifacts:
-  - `DeploymentRoleDev`, `DeploymentRoleStaging`, `DeploymentRoleProd` (ref: docs/02-iam.md)
-- Remote state bucket/table exist (see docs/02-infra.md) or create before running infra pipelines
-- Node.js LTS available in runners (used by both backend and frontend)
+**Protection rules:**
+- All `main`, `staging`, `dev` branches require PR + status checks before merge
+- Direct pushes are blocked on all three branches
+- After PR merge, the `apply` job automatically runs in the target environment
 
 ---
 ## 3) GitHub Repository Setup (once)
+
+1. Create branches `main`, `staging`, `dev` (all protected).
+2. **Enable branch protection on all three branches:**
+   - Require PR before merge (minimum 1 reviewer for `main`)
+   - Require status checks (CI) to pass before merge
+   - **Require branches to be up-to-date before merge**
+   - **Block direct pushes** (enforce PR-only workflow)
+   - Dismiss stale approvals when new commits pushed
+   - Block force-push and deletions
+3. Create GitHub Environments `dev`, `staging`, `prod`:
+   - `dev`: no approval (auto-deploy on PR merge)
+   - `staging`: optional approval
+   - `prod`: **require manual approval** (blocks apply until reviewed)
+4. Add repository secrets/vars:
+   - `AWS_REGION`
+   - `AWS_DEV_ROLE_ARN`, `AWS_STAGING_ROLE_ARN`, `AWS_PROD_ROLE_ARN`
+   - `TF_STATE_BUCKET`, `PROJECT_NAME`
+   - `COGNITO_USER_POOL_ID` (per env), API base URLs
+5. Configure OIDC trust in AWS IAM for `token.actions.githubusercontent.com` and map to role ARNs.
 1. Create branches `main` (default) and `staging`.
 2. Enable branch protection:
    - Require PR, status checks, and linear history on `main` and `staging`.
@@ -117,11 +133,15 @@ jobs:
 
 ---
 ## 7) Infra Plan/Apply (infra-plan-apply.yml)
+
 **Triggers:**
-- PR to `dev`, `staging`, `main` (plans respective environment)
-- Push to `dev` (auto-apply to dev)
-- Push to `staging` (auto-apply to staging)
-- Push to `main` (apply to prod after manual approval)
+- PR to any branch → `plan` job (review before merge)
+- Push to `dev`, `staging`, `main` (after PR merge) → `apply` job (auto-deploy)
+  - Push to `dev` → applies to dev
+  - Push to `staging` → applies to staging  
+  - Push to `main` → applies to prod (requires GitHub Environment approval)
+
+**Note:** Direct pushes blocked by branch protection; `apply` only runs after PR merge.
 
 ```yaml
 name: Infra Plan & Apply
