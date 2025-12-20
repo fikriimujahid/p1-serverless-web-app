@@ -1,32 +1,35 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useNote, useNotes } from '@/hooks/useNotes';
 
-export default function NotePage({ params }: { params: Promise<{ id: string }> }) {
-  const router = useRouter();
-  const { id } = use(params);
-  const { note, isLoading, error } = useNote(id);
-  const { updateNote, isUpdating } = useNotes();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [editError, setEditError] = useState('');
+type Props = {
+  id?: string;
+};
 
-  useEffect(() => {
-    if (note) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTitle(note.title);
-      setContent(note.content);
-    }
-  }, [note]);
+export default function NotePageClient({ id }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const noteId = id ?? searchParams.get('id') ?? '';
+
+  const { note, isLoading, error } = useNote(noteId);
+  const { updateNote, isUpdating } = useNotes();
+  const [title, setTitle] = useState(note?.title ?? '');
+  const [content, setContent] = useState(note?.content ?? '');
+  const [editError, setEditError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEditError('');
 
+    if (!noteId) {
+      setEditError('Missing note id');
+      return;
+    }
+
     try {
-      await updateNote({ id, payload: { title, content } });
+      await updateNote({ id: noteId, payload: { title, content } });
       router.push('/notes');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update note';
@@ -34,10 +37,18 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
     }
   };
 
+  if (!noteId) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded">
+        Missing note id. Please return to the notes list.
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" role="status" aria-label="Loading note"></div>
       </div>
     );
   }

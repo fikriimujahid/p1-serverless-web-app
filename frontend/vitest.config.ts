@@ -8,7 +8,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
-    singleThread: true,
+    sequence: {
+      concurrent: false,
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

@@ -53,7 +53,7 @@ export default function NotesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {notes.map((note) => (
             <div key={note.id} className="bg-white p-4 rounded-lg shadow">
-              <Link href={`/notes/${note.id}`}>
+              <Link href={`/notes/edit?id=${note.id}`}>
                 <h3 className="text-lg font-semibold mb-2 hover:text-blue-600">
                   {note.title}
                 </h3>
@@ -63,7 +63,7 @@ export default function NotesPage() {
               </p>
               <div className="flex gap-2">
                 <Link
-                  href={`/notes/${note.id}`}
+                  href={`/notes/edit?id=${note.id}`}
                   className="text-blue-600 hover:underline text-sm"
                 >
                   Edit
