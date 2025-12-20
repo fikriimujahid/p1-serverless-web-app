@@ -3,8 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { useNotes } from '@/hooks/useNotes';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
-export default function NotesPage() {
+function NotesPageContent() {
   const { notes, isLoading, error, deleteNote, isDeleting } = useNotes();
 
   if (isLoading) {
@@ -81,5 +82,13 @@ export default function NotesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NotesPage() {
+  return (
+    <ProtectedRoute>
+      <NotesPageContent />
+    </ProtectedRoute>
   );
 }

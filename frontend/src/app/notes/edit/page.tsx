@@ -1,4 +1,5 @@
 import NotePageClient from './NotePageClient';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 export const dynamic = 'force-static';
 
@@ -10,5 +11,9 @@ export default function EditNotePage({ searchParams }: PageProps) {
   const idParam = searchParams?.id;
   const id = Array.isArray(idParam) ? idParam[0] : idParam;
 
-  return <NotePageClient id={id} />;
+  return (
+    <ProtectedRoute>
+      <NotePageClient id={id} />
+    </ProtectedRoute>
+  );
 }

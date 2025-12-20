@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotes } from '@/hooks/useNotes';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
-export default function NewNotePage() {
+function NewNotePageContent() {
   const router = useRouter();
   const { createNote, isCreating } = useNotes();
   const [title, setTitle] = useState('');
@@ -80,5 +81,13 @@ export default function NewNotePage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewNotePage() {
+  return (
+    <ProtectedRoute>
+      <NewNotePageContent />
+    </ProtectedRoute>
   );
 }
