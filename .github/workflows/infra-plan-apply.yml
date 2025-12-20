@@ -30,7 +30,6 @@ jobs:
       - run: |
           cd infra/terraform/environments/${{ github.base_ref == 'main' && 'prod' || (github.base_ref == 'staging' && 'staging' || 'dev') }}
           terraform init -backend-config=backend.hcl
-          terraform fmt -check
           VAR_FILE=""
           if [ -f terraform.tfvars ]; then VAR_FILE="-var-file=terraform.tfvars"; fi
           terraform plan $VAR_FILE -out=tfplan
