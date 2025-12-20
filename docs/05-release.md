@@ -1,95 +1,106 @@
-## PHASE 5 — Release Process & Rollback
+# Release & Rollback Guide (Phase 5)
 
-### Purpose
-
-Define a simple, auditable release process and clear rollback steps for the Serverless Personal Notes application. This process assumes CI pipelines described in `docs/05-cicd.md`.
-
-### Principles
-
-- Safe: Protect production with manual gates and approvals.
-- Reversible: Keep artifacts and state to enable quick rollback.
-- Observable: Post-release checks verify user-facing functionality.
-
-### Release Types
-
-- **Minor / Patch**: Standard code changes, deployed via CI promotion.
-- **Hotfix**: Emergency fixes from `hotfix/*` branch; tested in `dev` then promoted to `prod` with expedited approvals.
+This document describes how to cut releases, promote between environments, and roll back safely for this project.
 
 ---
 
-**Versioning & Tagging**
+## 1) Release Cadence & Inputs
 
-- Use semantic versioning: `MAJOR.MINOR.PATCH`.
-- Tag `main` after successful `prod` deployment: `v1.2.3`.
-- Record release metadata (link to PR, change summary, deploy pipeline run ID) in release notes.
-
----
-
-**Pre-release checklist**
-
-- [ ] All CI checks passing (lint, tests, security scans)
-- [ ] Terraform / SAM plan reviewed and approved
-- [ ] Required approvals (code owners, security) present on PR
-- [ ] Backups & state snapshots validated (DynamoDB backups if changes touch data)
+- Cadence: ad hoc; recommend weekly for staging→prod once stable.
+- Inputs required per release:
+  - Target environment (`staging` or `prod`)
+  - Git tag (e.g., `v1.2.0`) created from `main`
+  - Change log summary (PRs included)
+  - Approver (different from author for prod)
 
 ---
 
-**Deploy Procedure (normal)**
+## 2) Promotion Flow
 
-1. Merge PR to `main` via protected merge (or promote build via CI `deploy` workflow).
-2. CI runs deploy job for `prod` using a limited `assume-role` credential.
-3. Run post-deploy smoke tests (API health, auth flow, note CRUD happy-path).
-4. Tag the release commit with semantic tag and push tag.
-5. Publish release notes (brief summary + known issues).
+```
+feature/* -> staging (merge PR) -> tag on main -> prod deploy
+```
 
----
-
-**Rollback Strategy**
-
-Primary options depending on failure mode:
-
-- **Code/config issue but infra unchanged**: Redeploy previous artifact (use prior deploy artifact or tag) to rollback to last-known-good version.
-- **Infra/destructive change (Terraform)**: Use `terraform apply` with prior state/commit or restore resources from backups. Review plan carefully before applying.
-- **Data loss / corruption**: Restore from DynamoDB point-in-time recovery or recent backup to a recovery environment; assess RPO/RTO per `docs/03-infra.md`.
-
-Rollback steps (fast path):
-
-1. Notify stakeholders and open incident channel.
-2. Stop further automatic promotions (pause CI triggers if necessary).
-3. Promote the last successful release tag to `prod` (redeploy artifact).
-4. Validate smoke tests and a subset of user flows.
-5. If rollback fails or data is impacted, escalate to infra team to restore state from backups.
+1. Merge feature branch into `staging` via PR after CI green.
+2. Release candidate validation in staging:
+   - Backend: run integration tests against staging API Gateway.
+   - Frontend: visual smoke (login, list notes, create/delete note).
+   - Infra: confirm Terraform plan shows no unexpected drift.
+3. Once validated, fast-forward `main` from `staging` or cherry-pick approved commits.
+4. Tag `main` with `vX.Y.Z` (semantic version) and push tag.
+5. Trigger `Release` workflow (auto on tag or manual dispatch) targeting `prod`.
 
 ---
 
-**Emergency Hotfix Flow**
+## 3) Release Execution Steps
 
-1. Create `hotfix/<id>` branch from `main`.
-2. Implement minimal fix; run CI (lint + unit tests + quick smoke on `dev`).
-3. Obtain expedited approvals (1 senior reviewer + ops owner).
-4. Deploy to `prod` using the hotfix deploy workflow.
-5. Tag and document the hotfix after successful validation.
+1) **Prepare notes**
+- Aggregate merged PRs, highlight infra changes and breaking changes.
 
----
+2) **Cut tag**
+- From an updated `main`: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
-**Post-release Validation (must-pass smoke)**
+3) **Run Release workflow**
+- If automatic via tag: monitor jobs in GitHub Actions.
+- If manual dispatch: choose environment `staging` or `prod`, set tag/ref if prompted.
 
-- API health endpoint responds within SLA
-- Auth flow works end-to-end (login, token validation)
-- Basic CRUD for notes (create, list, update, delete)
-- No elevated error rates in logs/metrics
+4) **Post-deploy smoke** (prod)
+- `GET /notes` returns 200.
+- Create/delete note with a test user.
+- Frontend loads via CloudFront domain.
 
----
-
-**Post-release actions**
-
-- Create release notes and link to PRs and pipeline run.
-- Close related tasks and update `docs/01-decision-log.md` if any architecture decisions changed.
-- Review costs and alarms for unexpected spikes.
+5) **Announce**
+- Post change log, deploy time, and any follow-up tasks in team channel.
 
 ---
 
-**Playbook Links**
+## 4) Rollback Playbooks
 
-- CI/CD implementation: [docs/05-cicd.md](docs/05-cicd.md)
-- Infra environment/state: `infra/terraform/environments/`
+### A. App rollback (frontend/backend) — fastest
+1. Identify last known good tag (e.g., `v1.1.3`).
+2. Dispatch `Release` workflow targeting that tag/environment.
+3. Verify smoke tests; leave audit note in release log.
+
+### B. Infra rollback (Terraform)
+1. Pause prod deploys (lock branch if needed).
+2. Retrieve prior state version from S3 (state bucket versioning enabled).
+3. Run `terraform apply` using that state (manual approval required).
+4. Re-run `Release` workflow to ensure app matches infra.
+
+### C. Hotfix forward (preferred if issue understood)
+1. Branch from `main` (e.g., `hotfix/xyz`).
+2. Apply minimal fix; run CI.
+3. PR into `main` (prod) and cherry-pick or merge into `staging`.
+4. Tag new version and redeploy.
+
+---
+
+## 5) Preconditions & Safety Gates
+
+- Branch protections on `main` and `staging` enabled (PR + status checks).
+- GitHub environment `prod` requires reviewer approval before deploy job runs.
+- OIDC roles limited by condition keys (audience, repo, branch).
+- Secrets scoped to environments; no prod secrets in dev/staging.
+
+---
+
+## 6) Checklists
+
+**Before tagging:**
+- [ ] Staging tests green (backend, frontend)
+- [ ] Terraform plan reviewed for prod
+- [ ] Release notes drafted
+- [ ] Approver available for prod deploy
+
+**After deploy:**
+- [ ] Smoke tests pass
+- [ ] Metrics/alarms nominal (API errors, Lambda duration, DynamoDB throttles)
+- [ ] Release log updated with tag, time, approver
+
+---
+
+## 7) Artifacts & References
+
+- CI/CD definitions: docs/05-cicd.md
+- Architecture/infra context: docs/01-architecture.md, docs/02-infra.md, docs/03-backend-design.md, docs/04-frontend.md
+- API contract: docs/03-api.md
