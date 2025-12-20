@@ -17,18 +17,6 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Debug OIDC token claims
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const token = await core.getIDToken('sts.amazonaws.com');
-            const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-            core.info(`OIDC aud: ${claims.aud}`);
-            core.info(`OIDC sub: ${claims.sub}`);
-            if (claims.job_workflow_ref) core.info(`workflow_ref: ${claims.job_workflow_ref}`);
-            if (claims.repository) core.info(`repository: ${claims.repository}`);
-            if (claims.ref) core.info(`ref: ${claims.ref}`);
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ github.base_ref == 'main' && secrets.AWS_PROD_ROLE_ARN || (github.base_ref == 'staging' && secrets.AWS_STAGING_ROLE_ARN || secrets.AWS_DEV_ROLE_ARN) }}
