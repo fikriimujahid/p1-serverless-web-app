@@ -47,6 +47,7 @@ jobs:
             --stack-name "${PROJECT_NAME}-stack-${ENV_NAME}" \
             --s3-prefix "${PROJECT_NAME}-stack-${ENV_NAME}" \
             --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --parameter-overrides Environment=${ENV_NAME}
