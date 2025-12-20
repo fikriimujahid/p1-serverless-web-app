@@ -26,7 +26,7 @@ jobs:
           role-session-name: github-actions-plan
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.6
+          terraform_version: 1.12.1
       - run: |
           cd infra/terraform/environments/${{ github.base_ref == 'main' && 'prod' || (github.base_ref == 'staging' && 'staging' || 'dev') }}
           terraform init -backend-config=backend.hcl
@@ -61,7 +61,7 @@ jobs:
           role-session-name: github-actions-apply
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.6
+          terraform_version: 1.12.1
       - run: |
           cd infra/terraform/environments/${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
           terraform init -backend-config=backend.hcl
