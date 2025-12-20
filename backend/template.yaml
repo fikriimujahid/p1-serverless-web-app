@@ -20,6 +20,7 @@ Parameters:
     Default: dev
     AllowedValues:
       - dev
+      - staging
       - prod
     Description: Environment name
   
