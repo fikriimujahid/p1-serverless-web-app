@@ -33,7 +33,7 @@ jobs:
           VAR_FILE=""
           if [ -f terraform.tfvars ]; then VAR_FILE="-var-file=terraform.tfvars"; fi
           terraform plan $VAR_FILE -out=tfplan
-      - run: terraform show -json tfplan > tfplan.json
+          terraform show -json tfplan > tfplan.json
   apply:
     needs: plan
     if: github.event_name == 'push'
