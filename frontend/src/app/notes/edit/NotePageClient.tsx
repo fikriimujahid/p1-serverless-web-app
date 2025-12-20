@@ -15,8 +15,10 @@ export default function NotePageClient({ id }: Props) {
 
   const { note, isLoading, error } = useNote(noteId);
   const { updateNote, isUpdating } = useNotes();
-  const [title, setTitle] = useState(note?.title ?? '');
-  const [content, setContent] = useState(note?.content ?? '');
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [titleEdited, setTitleEdited] = useState(false);
+  const [contentEdited, setContentEdited] = useState(false);
   const [editError, setEditError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,7 +31,9 @@ export default function NotePageClient({ id }: Props) {
     }
 
     try {
-      await updateNote({ id: noteId, payload: { title, content } });
+      const finalTitle = titleEdited ? title : (note?.title ?? '');
+      const finalContent = contentEdited ? content : (note?.content ?? '');
+      await updateNote({ id: noteId, payload: { title: finalTitle, content: finalContent } });
       router.push('/notes');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update note';
@@ -76,8 +80,11 @@ export default function NotePageClient({ id }: Props) {
           <label className="block text-sm font-medium mb-1">Title</label>
           <input
             type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={titleEdited ? title : (note?.title ?? '')}
+            onChange={(e) => {
+              setTitleEdited(true);
+              setTitle(e.target.value);
+            }}
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -85,8 +92,11 @@ export default function NotePageClient({ id }: Props) {
         <div>
           <label className="block text-sm font-medium mb-1">Content</label>
           <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
+            value={contentEdited ? content : (note?.content ?? '')}
+            onChange={(e) => {
+              setContentEdited(true);
+              setContent(e.target.value);
+            }}
             rows={10}
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
