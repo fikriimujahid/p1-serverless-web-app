@@ -15,6 +15,7 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
 
   useEffect(() => {
     if (note) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(note.title);
       setContent(note.content);
     }

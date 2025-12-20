@@ -21,9 +21,13 @@ const createTestQueryClient = () =>
 const createWrapper = () => {
   const testQueryClient = createTestQueryClient();
 
-  return ({ children }: { children: React.ReactNode }) => (
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={testQueryClient}>{children}</QueryClientProvider>
   );
+  
+  Wrapper.displayName = 'TestQueryClientWrapper';
+  
+  return Wrapper;
 };
 
 describe('useNotes hook', () => {
@@ -55,7 +59,7 @@ describe('useNotes hook', () => {
       logout: vi.fn(),
       isLoading: false,
       idToken: 'token',
-    } as any);
+    } as ReturnType<typeof authLib.useAuth>);
   });
 
   it('fetches and returns notes list', async () => {
@@ -211,7 +215,7 @@ describe('useNote hook', () => {
       logout: vi.fn(),
       isLoading: false,
       idToken: 'token',
-    } as any);
+    } as ReturnType<typeof authLib.useAuth>);
   });
 
   it('fetches a single note by id', async () => {
@@ -257,7 +261,7 @@ describe('useNote hook', () => {
       logout: vi.fn(),
       isLoading: false,
       idToken: null,
-    } as any);
+    } as ReturnType<typeof authLib.useAuth>);
 
     vi.mocked(notesApi.notesApi.getNote).mockResolvedValue(mockNote);
 

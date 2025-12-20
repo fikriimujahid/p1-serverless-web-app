@@ -48,7 +48,7 @@ export function CTASection({ onGetStarted }: CTASectionProps) {
                     <Star key={i} className="h-4 w-4 fill-primary text-primary" />
                   ))}
                 </div>
-                <p className="text-muted-foreground mb-4">"{testimonial.quote}"</p>
+                <p className="text-muted-foreground mb-4">&quot;{testimonial.quote}&quot;</p>
                 <div>
                   <div className="font-semibold">{testimonial.author}</div>
                   <div className="text-sm text-muted-foreground">{testimonial.role}</div>
