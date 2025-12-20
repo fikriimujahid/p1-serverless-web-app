@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useNote, useNotes } from '@/hooks/useNotes';
 
@@ -15,16 +15,9 @@ export default function NotePageClient({ id }: Props) {
 
   const { note, isLoading, error } = useNote(noteId);
   const { updateNote, isUpdating } = useNotes();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [title, setTitle] = useState(note?.title ?? '');
+  const [content, setContent] = useState(note?.content ?? '');
   const [editError, setEditError] = useState('');
-
-  useEffect(() => {
-    if (note) {
-      setTitle(note.title);
-      setContent(note.content);
-    }
-  }, [note]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
