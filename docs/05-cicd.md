@@ -1,107 +1,259 @@
-## PHASE 5 — CI/CD & Branching
+# PHASE 5 — CI/CD & Branching
 
-### Purpose
-
-Capture the CI/CD design and pipeline contract for the Serverless Personal Notes application. Use this as the single source of truth for branching, pipeline stages, environment mapping, and gating rules.
-
-### Goals
-
-- Short, repeatable pipelines that map to `dev`, `staging`, and `prod`.
-- Safe, auditable deploys with least-privilege deploy roles.
-- Fast feedback for developers and protected production deployments.
-
-### References
-
-- Problem & constraints: [docs/00-problem.md](docs/00-problem.md)
-- High-level architecture & selected services: [docs/01-architecture.md](docs/01-architecture.md)
+This document is a step-by-step guide to stand up CI/CD and branching for this project when no repo or `.github/` folder exists yet. It assumes the architecture, infra, and app decisions defined in earlier phases.
 
 ---
 
-**Branching Strategy**
+## 1) Branching Strategy
 
-- **main**: Protected production branch. Only CI-promoted merges (via PR with required approvals) and release tags are merged here.
-- **develop**: Integration branch for the next release. CI deploys `develop` -> `dev` environment automatically.
-- **feature/*:** Short-lived feature branches created from `develop`. Merge back to `develop` via PR.
-- **hotfix/*:** Created from `main` for urgent fixes. Merge back to both `main` and `develop` after validation.
-- **release/*:** Optional short-lived branch for stabilizing a release; used when release candidate testing requires isolation.
+**Model:** Trunk with short-lived feature branches and one staging branch.
 
-Key rules:
+- `main` → production source of truth; protected, release tags cut here
+- `staging` → pre-prod integration; mirrors prod settings minus elevated limits
+- `feature/*` → short-lived branches merged via PR into `staging`
 
-- Protect `main` with required reviews (2 approvals), passing CI, and signed commits if available.
-- Require branch up-to-date with target before merge to avoid accidental fast-forwards.
+**Environment mapping:**
 
----
-
-**Pipeline Stages (logical)**
-
-- 1) **Validate**: Lint, typecheck (TypeScript), dependency audit, static security scans.
-- 2) **Unit Test**: Run unit tests; enforce coverage gate for critical modules.
-- 3) **Build**: Compile backend (SAM/TypeScript), build frontend assets.
-- 4) **Integration / Contract Tests**: Run lightweight integration tests against ephemeral or mocked services.
-- 5) **Package**: Build deployment artifacts (CloudFormation/SAM package, Terraform plan; Docker images if used).
-- 6) **Deploy (Env)**: Deploy to target environment (`dev` automated, `staging` via manual approval, `prod` via gated promotion).
-- 7) **Post-deploy smoke**: Health checks, basic end-to-end test run, synthetic API call.
-- 8) **Notify & Tag**: Notify stakeholders and tag the release commit.
-
-Notes:
-
-- Keep pipelines small and parallel where possible (e.g., lint + unit tests can run in parallel).
-- Use cached artifacts between stages to speed execution.
+| Branch    | Environment | Deploys To | Notes |
+| --------- | ----------- | ---------- | ----- |
+| main      | prod        | prod AWS account/env (tags `Environment=prod`) | Requires approval before apply
+| staging   | staging     | staging env (tags `Environment=staging`) | Auto deploy after PR merge
+| feature/* | dev         | dev env (tags `Environment=dev`) | CI only; optional preview deploys
 
 ---
 
-**Environment Mapping**
+## 2) Prerequisites
 
-- `dev` — branch: `develop` (auto-deploy). Purpose: developer integration and quick verification.
-- `staging` — branch: `release/*` or `develop` promoted (manual). Purpose: pre-production acceptance testing.
-- `prod` — branch: `main` (promote via CI pipeline). Purpose: live users.
-
-Each environment SHOULD have separated configuration/state and minimal-permission deploy roles. For Terraform state, use remote state backends per environment (already present under `infra/terraform/environments/`).
-
----
-
-**Implementation Notes (GitHub Actions example)**
-
-- Use `pull_request` workflows to run Validate / Unit Test for PRs.
-- Use `workflow_run` or `push` to `develop` for automatic `dev` deployments.
-- Use a protected `deploy` workflow (manual approval or `workflow_dispatch`) for `staging` and `prod` with a `promote` job that performs plan/apply or SAM deploy.
-- Store secrets in the CI provider's secret store and restrict read access to deployment jobs only.
-
-Secrets and credentials minimal set:
-
-- `AWS_ACCESS_KEY_ID_DEPLOYER` / `AWS_SECRET_ACCESS_KEY_DEPLOYER`: scoped to least-privilege deploy role.
-- `TERRAFORM_BACKEND_KEY` or per-environment backend credentials
-- `NOTIFICATION_WEBHOOK` (optional)
+- GitHub repository created (private recommended)
+- AWS IAM roles per env with least-privilege access to Terraform state, SAM deploy, and CI artifacts:
+  - `DeploymentRoleDev`, `DeploymentRoleStaging`, `DeploymentRoleProd` (ref: docs/02-iam.md)
+- Remote state bucket/table exist (see docs/02-infra.md) or create before running infra pipelines
+- Node.js LTS available in runners (used by both backend and frontend)
 
 ---
 
-**Security & Safety Controls**
+## 3) GitHub Repository Setup (once)
 
-- Use assume-role pattern in CI: CI authenticates to a short-lived role that has only the permissions required for the environment.
-- Use separate IAM roles for `dev`, `staging`, and `prod` deploys.
-- Require manual approvals for `prod` deploys and disallow direct pushes to `main`.
-- Enable audit logging (CloudTrail) and retain deploy logs for post-incident analysis.
-
----
-
-**Review Checklist (PR / Release)**
-
-- [ ] Lint and typecheck passed
-- [ ] Unit tests passed
-- [ ] Integration/smoke tests passed for target environment
-- [ ] Required approvals obtained
-- [ ] Terraform/SAM plan reviewed and no destructive changes to prod resources
+1. Create branches `main` (default) and `staging`.
+2. Enable branch protection:
+   - Require PR, status checks, and linear history on `main` and `staging`.
+   - Require 1+ reviewer for `main`; optional for `staging`.
+   - Block force-push and deletions.
+3. Create GitHub Environments `dev`, `staging`, `prod` with required reviewers for `prod`.
+4. Add repository secrets/vars (names used in workflows below):
+   - `AWS_REGION`
+   - `AWS_DEV_ROLE_ARN`, `AWS_STAGING_ROLE_ARN`, `AWS_PROD_ROLE_ARN`
+   - `TF_STATE_BUCKET`, `TF_STATE_TABLE`, `PROJECT_NAME`
+   - `COGNITO_USER_POOL_ID` (per env) and any API base URLs as env vars.
+5. Add OIDC trust in AWS IAM for `token.actions.githubusercontent.com` and map to the role ARNs above.
 
 ---
 
-**Quick Questions**
+## 4) Workflow Layout
 
-- Can I deploy safely on Friday? — Use the checklist above; avoid deploying large, risky changes before weekend unless emergency fixes.
-- Is prod protected? — Yes, via branch protection, required approvals, and gated CI promotion.
+Create `.github/workflows/` with these files:
+
+1. `backend-ci.yml` — lint, typecheck, unit tests for `backend/`
+2. `frontend-ci.yml` — lint, typecheck, unit tests for `frontend/`
+3. `infra-plan-apply.yml` — Terraform/SAM plan+apply gated by environment
+4. `release.yml` — cut tags/releases from `main`, post-deploy smoke
 
 ---
 
-**Suggested Next Steps**
+## 5) Backend CI (backend-ci.yml)
 
-- Add CI workflow file(s) under `.github/workflows/` following the stage order above.
-- Implement CI assume-role pattern and create least-privilege deploy roles in `infra/`.
+**Triggers:** PR to `staging` and `main`; push to `feature/*`.
+
+```yaml
+name: Backend CI
+on:
+  pull_request:
+    branches: [staging, main]
+    paths: ["backend/**"]
+  push:
+    branches: ["feature/**"]
+    paths: ["backend/**"]
+jobs:
+  backend-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --runInBand
+```
+
+---
+
+## 6) Frontend CI (frontend-ci.yml)
+
+**Triggers:** PR to `staging` and `main`; push to `feature/*`.
+
+```yaml
+name: Frontend CI
+on:
+  pull_request:
+    branches: [staging, main]
+    paths: ["frontend/**"]
+  push:
+    branches: ["feature/**"]
+    paths: ["frontend/**"]
+jobs:
+  frontend-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --runInBand
+```
+
+---
+
+## 7) Infra Plan/Apply (infra-plan-apply.yml)
+
+**Triggers:**
+- PR to `staging` (plans staging) and `main` (plans prod)
+- Push to `staging` (auto-apply to staging)
+- Push to `main` (apply to prod after manual approval)
+
+```yaml
+name: Infra Plan & Apply
+on:
+  pull_request:
+    branches: [staging, main]
+    paths: ["infra/**", "backend/template.yaml"]
+  push:
+    branches: [staging, main]
+    paths: ["infra/**", "backend/template.yaml"]
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  TF_IN_AUTOMATION: true
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ github.base_ref == 'main' && secrets.AWS_PROD_ROLE_ARN || secrets.AWS_STAGING_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+      - run: |
+          cd infra/terraform/environments/${{ github.base_ref == 'main' && 'prod' || 'staging' }}
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="dynamodb_table=${{ secrets.TF_STATE_TABLE }}"
+          terraform fmt -check
+          terraform plan -out=tfplan
+      - run: terraform show -json tfplan > tfplan.json
+  apply:
+    needs: plan
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ github.ref_name == 'main' && secrets.AWS_PROD_ROLE_ARN || secrets.AWS_STAGING_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+      - run: |
+          cd infra/terraform/environments/${{ github.ref_name == 'main' && 'prod' || 'staging' }}
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="dynamodb_table=${{ secrets.TF_STATE_TABLE }}"
+          terraform apply -auto-approve tfplan || terraform apply -auto-approve
+```
+
+---
+
+## 8) Release & Deploy (release.yml)
+
+**Triggers:** Manual dispatch or push tag `v*` on `main`.
+- Builds frontend static site, packages backend with SAM, deploys to selected environment.
+- After prod deploy, run minimal smoke (API `GET /notes`) using Postman or curl.
+
+```yaml
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Environment to deploy"
+        required: true
+        default: prod
+        type: choice
+        options: [staging, prod]
+  push:
+    tags: ["v*"]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env || 'prod' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ (inputs.env == 'prod' || startsWith(github.ref, 'refs/tags/')) && secrets.AWS_PROD_ROLE_ARN || secrets.AWS_STAGING_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Build backend (SAM)
+        run: |
+          cd backend
+          npm ci
+          npm run build
+          sam build
+      - name: Deploy backend (SAM)
+        run: |
+          cd backend
+          sam deploy --stack-name "${{ secrets.PROJECT_NAME }}-${{ inputs.env || 'prod' }}" --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides Environment=${{ inputs.env || 'prod' }}
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+      - name: Publish frontend artifact
+        run: |
+          aws s3 sync frontend/out s3://${{ secrets.PROJECT_NAME }}-${{ inputs.env || 'prod' }}-web --delete
+      - name: Smoke test API
+        run: |
+          curl -f ${{ secrets.API_BASE_URL }}/notes || exit 1
+```
+
+---
+
+## 9) Day-2 Operations
+
+- **Rollback app only:** Redeploy previous tag with `release.yml` dispatch selecting the prior tag.
+- **Rollback infra:** `terraform apply` with prior state (S3 version) after peer review.
+- **Hotfix:** Branch from `main`, PR into `main`, cherry-pick into `staging` if needed.
+- **Observability hooks:** Wire CloudWatch alarms and GitHub deploy status checks (Phase 7).
+
+---
+
+## 10) Verification Checklist
+
+- Branch protections enforced on `main`/`staging`
+- OIDC trust configured for GitHub Actions roles
+- Secrets/vars present for all environments
+- CI passes for backend and frontend
+- Terraform plans visible in PRs; applies gated by environment
+- Release workflow can deploy to staging, then prod after approval
