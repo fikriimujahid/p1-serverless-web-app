@@ -45,6 +45,7 @@ jobs:
         run: |
           sam deploy \
             --stack-name "${{ env.PROJECT_NAME }}-stack-${ENV_NAME}" \
+            --resolve-s3 \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --parameter-overrides Environment=${ENV_NAME}
