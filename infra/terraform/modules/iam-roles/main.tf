@@ -1,5 +1,14 @@
 data "aws_caller_identity" "current" {}
 
+locals {
+  allowed_subs = [
+    "repo:${var.github_repo}:ref:refs/heads/dev",
+    "repo:${var.github_repo}:ref:refs/heads/staging",
+    "repo:${var.github_repo}:ref:refs/heads/main",
+    "repo:${var.github_repo}:pull_request"
+  ]
+}
+
 # TerraformDevRole - For local dev/staging Terraform
 resource "aws_iam_role" "terraform_dev" {
   name = "TerraformDevRole"
@@ -16,6 +25,21 @@ resource "aws_iam_role" "terraform_dev" {
         Condition = {
           StringEquals = {
             "sts:ExternalId" = "terraform-dev"
+          }
+        }
+      },
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = var.github_oidc_provider_arn
+        }
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          }
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = local.allowed_subs
           }
         }
       }
@@ -37,10 +61,18 @@ resource "aws_iam_role" "terraform_prod" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
+        Action = "sts:AssumeRoleWithWebIdentity"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.cicd_runner.arn
+          Federated = var.github_oidc_provider_arn
+        }
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          }
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = local.allowed_subs
+          }
         }
       }
     ]
@@ -71,7 +103,7 @@ resource "aws_iam_role" "cicd_runner" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
+            "token.actions.githubusercontent.com:sub" = local.allowed_subs
           }
         }
       }

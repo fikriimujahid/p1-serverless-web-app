@@ -64,7 +64,30 @@ Attach this trust relationship to each deployment role (dev/staging/prod). Repla
 
 Notes:
 - Scope to branches used by your workflow triggers (dev/staging/main). Add patterns for tags if needed: `repo:ORG/REPO:ref:refs/tags/v*`.
-- You can further restrict by workflow path using `token.actions.githubusercontent.com:sub` with `workflow:` conditions (advanced).
+- For Pull Request runs, GitHub emits `sub: repo:ORG/REPO:pull_request`. Include this if your plan job needs AWS access:
+
+```json
+{
+  "StringLike": {
+    "token.actions.githubusercontent.com:sub": [
+      "repo:ORG/REPO:ref:refs/heads/dev",
+      "repo:ORG/REPO:ref:refs/heads/staging",
+      "repo:ORG/REPO:ref:refs/heads/main",
+      "repo:ORG/REPO:pull_request"
+    ]
+  }
+}
+```
+
+- Optional hardening: restrict to a specific workflow file using `job_workflow_ref`:
+
+```json
+{
+  "StringLike": {
+    "token.actions.githubusercontent.com:job_workflow_ref": "ORG/REPO/.github/workflows/infra-plan-apply.yml@*"
+  }
+}
+```
 
 Terraform example for a role (dev):
 
@@ -84,7 +107,10 @@ resource "aws_iam_role" "deploy_dev" {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
         }
         StringLike = {
-          "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/dev"
+          "token.actions.githubusercontent.com:sub" = [
+            "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/dev",
+            "repo:${var.github_org}/${var.github_repo}:pull_request"
+          ]
         }
       }
     }]
