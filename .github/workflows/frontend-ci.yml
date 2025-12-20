@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: npm
-      - run: npm ci
+      - run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
       - run: npm run lint
       - run: npm test -- --runInBand

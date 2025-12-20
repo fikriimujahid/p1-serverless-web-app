@@ -29,13 +29,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: npm
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ github.ref_name == 'main' && secrets.AWS_PROD_ROLE_ARN || (github.ref_name == 'staging' && secrets.AWS_STAGING_ROLE_ARN || secrets.AWS_DEV_ROLE_ARN) }}
       - name: Install deps
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
       - name: Build static site
         run: npm run build
       - name: Sync to S3
