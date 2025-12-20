@@ -18,12 +18,11 @@ This document is a step-by-step guide to stand up CI/CD and branching for this p
 | --------- | ----------- | ---------- | ----- |
 | main      | prod        | prod AWS account/env (tags `Environment=prod`) | Requires approval before apply
 | staging   | staging     | staging env (tags `Environment=staging`) | Auto deploy after PR merge
-| feature/* | dev         | dev env (tags `Environment=dev`) | CI only; optional preview deploys
+| dev       | dev         | dev env (tags `Environment=dev`) | Auto deploy after push
+| feature/* | (dev)       | dev env (tags `Environment=dev`) | CI only; branch off `dev`
 
 ---
-
 ## 2) Prerequisites
-
 - GitHub repository created (private recommended)
 - AWS IAM roles per env with least-privilege access to Terraform state, SAM deploy, and CI artifacts:
   - `DeploymentRoleDev`, `DeploymentRoleStaging`, `DeploymentRoleProd` (ref: docs/02-iam.md)
@@ -31,9 +30,7 @@ This document is a step-by-step guide to stand up CI/CD and branching for this p
 - Node.js LTS available in runners (used by both backend and frontend)
 
 ---
-
 ## 3) GitHub Repository Setup (once)
-
 1. Create branches `main` (default) and `staging`.
 2. Enable branch protection:
    - Require PR, status checks, and linear history on `main` and `staging`.
@@ -48,9 +45,7 @@ This document is a step-by-step guide to stand up CI/CD and branching for this p
 5. Add OIDC trust in AWS IAM for `token.actions.githubusercontent.com` and map to the role ARNs above.
 
 ---
-
 ## 4) Workflow Layout
-
 Create `.github/workflows/` with these files:
 
 1. `backend-ci.yml` — lint, typecheck, unit tests for `backend/`
@@ -59,9 +54,7 @@ Create `.github/workflows/` with these files:
 4. `release.yml` — cut tags/releases from `main`, post-deploy smoke
 
 ---
-
 ## 5) Backend CI (backend-ci.yml)
-
 **Triggers:** PR to `staging` and `main`; push to `feature/*`.
 
 ```yaml
@@ -92,9 +85,7 @@ jobs:
 ```
 
 ---
-
 ## 6) Frontend CI (frontend-ci.yml)
-
 **Triggers:** PR to `staging` and `main`; push to `feature/*`.
 
 ```yaml
@@ -125,11 +116,10 @@ jobs:
 ```
 
 ---
-
 ## 7) Infra Plan/Apply (infra-plan-apply.yml)
-
 **Triggers:**
-- PR to `staging` (plans staging) and `main` (plans prod)
+- PR to `dev`, `staging`, `main` (plans respective environment)
+- Push to `dev` (auto-apply to dev)
 - Push to `staging` (auto-apply to staging)
 - Push to `main` (apply to prod after manual approval)
 
@@ -185,9 +175,7 @@ jobs:
 ```
 
 ---
-
 ## 8) Release & Deploy (release.yml)
-
 **Triggers:** Manual dispatch or push tag `v*` on `main`.
 - Builds frontend static site, packages backend with SAM, deploys to selected environment.
 - After prod deploy, run minimal smoke (API `GET /notes`) using Postman or curl.
@@ -239,7 +227,6 @@ jobs:
 ```
 
 ---
-
 ## 9) Day-2 Operations
 
 - **Rollback app only:** Redeploy previous tag with `release.yml` dispatch selecting the prior tag.

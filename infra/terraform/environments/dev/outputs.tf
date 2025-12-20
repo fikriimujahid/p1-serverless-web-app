@@ -46,7 +46,7 @@ output "user_pool_arn" {
 }
 
 # ============================================================================
-# Hosting Module Outputs
+# Hosting Module Outputs 
 # ============================================================================
 
 output "hosting_bucket_name" {
