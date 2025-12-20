@@ -35,7 +35,6 @@ jobs:
           terraform plan $VAR_FILE -out=tfplan
           terraform show -json tfplan > tfplan.json
   apply:
-    needs: plan
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
