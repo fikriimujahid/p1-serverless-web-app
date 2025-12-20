@@ -42,7 +42,7 @@ jobs:
         env:
           ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
         run: |
-          aws s3 sync out s3://${{ env.PROJECT_NAME }}-${ENV_NAME}-web --delete
+          aws s3 sync out s3://${{ env.PROJECT_NAME }}-${ENV_NAME}-website --delete
       - name: Optional CloudFront invalidation
         env:
           ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
