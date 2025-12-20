@@ -5,7 +5,6 @@ on:
     paths: ["infra/**"]
   push:
     branches: [dev, staging, main]
-    paths: ["infra/**"]
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   TF_IN_AUTOMATION: true
