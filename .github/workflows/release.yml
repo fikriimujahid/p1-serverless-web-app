@@ -1,0 +1,43 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Environment to deploy"
+        required: true
+        default: prod
+        type: choice
+        options: [staging, prod]
+  push:
+    tags: ["v*"]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env || 'prod' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ (inputs.env == 'prod' || startsWith(github.ref, 'refs/tags/')) && secrets.AWS_PROD_ROLE_ARN || secrets.AWS_STAGING_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Build backend (SAM)
+        run: |
+          cd backend
+          npm ci
+          npm run build
+          sam build
+      - name: Deploy backend (SAM)
+        run: |
+          cd backend
+          sam deploy --stack-name "${{ secrets.PROJECT_NAME }}-${{ inputs.env || 'prod' }}" --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides Environment=${{ inputs.env || 'prod' }}
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+      - name: Publish frontend artifact
+        run: |
+          aws s3 sync frontend/out s3://${{ secrets.PROJECT_NAME }}-${{ inputs.env || 'prod' }}-web --delete
+      - name: Smoke test API
+        run: |
+          curl -f ${{ secrets.API_BASE_URL }}/notes || exit 1
