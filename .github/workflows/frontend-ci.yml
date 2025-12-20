@@ -17,6 +17,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
+      - name: Create .env.local
+        run: |
+          cat <<'EOF' > .env.local
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
+          NEXT_PUBLIC_REGION=${{ secrets.NEXT_PUBLIC_REGION }}
+          EOF
       - run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
       - run: npm run lint
