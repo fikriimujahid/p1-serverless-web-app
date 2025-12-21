@@ -33,18 +33,12 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ github.ref_name == 'main' && secrets.AWS_PROD_ROLE_ARN || (github.ref_name == 'staging' && secrets.AWS_STAGING_ROLE_ARN || secrets.AWS_DEV_ROLE_ARN) }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.1
       - uses: aws-actions/setup-sam@v2
       - run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
       - run: npm run build
       - name: SAM build
         run: sam build
-      - name: Ensure jq is available
-        run: sudo apt-get update && sudo apt-get install -y jq
       - name: Check if stack exists
         id: stack-check
         env:
@@ -58,29 +52,12 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "Stack $STACK_NAME not found; will provide parameter overrides"
           fi
-      - name: Get Terraform outputs (table_name, user_pool_id)
-        id: tf-outputs
-        env:
-          ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
-        if: steps.stack-check.outputs.exists == 'false'
-        run: |
-          cd ../infra/terraform/environments/${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
-          terraform init -backend-config=backend.hcl
-          TABLE_JSON=$(terraform output -json table_name)
-          USER_POOL_JSON=$(terraform output -json user_pool_id)
-          TABLE_NAME=$(echo "$TABLE_JSON" | jq -r '.value.notes // (.value | to_entries | .[0].value)')
-          USER_POOL_ID=$(echo "$USER_POOL_JSON" | jq -r '.value')
-          echo "table_name=$TABLE_NAME" >> $GITHUB_OUTPUT
-          echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
-          echo "Resolved outputs: table_name=$TABLE_NAME, user_pool_id=$USER_POOL_ID"
       - name: Build SAM parameter overrides (first deploy only)
         if: steps.stack-check.outputs.exists == 'false'
         env:
           ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
-          TABLE_NAME: ${{ steps.tf-outputs.outputs.table_name }}
-          USER_POOL_ID: ${{ steps.tf-outputs.outputs.user_pool_id }}
         run: |
-          echo "SAM_PARAMETER_OVERRIDES=--parameter-overrides Environment=${ENV_NAME} DynamoDBTableName=${TABLE_NAME} UserPoolId=${USER_POOL_ID}" >> $GITHUB_ENV
+          echo "SAM_PARAMETER_OVERRIDES=--parameter-overrides Environment=${ENV_NAME} DynamoDBTableName=${{ secrets.TABLE_NAME }} UserPoolId=${{ secrets.USER_POOL_ID }}" >> $GITHUB_ENV
       - name: SAM deploy
         env:
           ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
