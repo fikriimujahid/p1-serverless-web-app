@@ -1,0 +1,99 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Environment to deploy"
+        required: true
+        default: prod
+        type: choice
+        options: [staging, prod]
+  push:
+    tags: ["v*"]
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+
+concurrency:
+  group: release-${{ inputs.env || 'prod' }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env || 'prod' }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ (inputs.env == 'prod' || startsWith(github.ref, 'refs/tags/')) && secrets.AWS_PROD_ROLE_ARN || secrets.AWS_STAGING_ROLE_ARN }}
+      - uses: aws-actions/setup-sam@v2
+
+      # Backend build & deploy
+      - name: Install backend deps
+        working-directory: backend
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+      - name: SAM build (backend)
+        working-directory: backend
+        run: sam build
+      - name: SAM deploy (backend)
+        working-directory: backend
+        env:
+          ENV_NAME: ${{ inputs.env || 'prod' }}
+        run: |
+          sam deploy \
+            --stack-name "${PROJECT_NAME}-stack-${ENV_NAME}" \
+            --s3-prefix "${PROJECT_NAME}-stack-${ENV_NAME}" \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides Environment=${ENV_NAME}
+
+      # Frontend build & deploy
+      - name: Create .env.local (frontend)
+        working-directory: frontend
+        run: |
+          cat <<'EOF' > .env.local
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
+          NEXT_PUBLIC_REGION=${{ secrets.NEXT_PUBLIC_REGION }}
+          EOF
+      - name: Install frontend deps
+        working-directory: frontend
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+      - name: Sync frontend to S3
+        working-directory: frontend
+        env:
+          ENV_NAME: ${{ inputs.env || 'prod' }}
+        run: |
+          aws s3 sync out s3://${PROJECT_NAME}-${ENV_NAME}-website --delete
+      - name: Optional CloudFront invalidation
+        env:
+          ENV_NAME: ${{ inputs.env || 'prod' }}
+          CF_DIST_ID: ${{ (inputs.env == 'prod' || startsWith(github.ref, 'refs/tags/')) && secrets.CF_DIST_ID_PROD || secrets.CF_DIST_ID_STAGING }}
+        if: env.CF_DIST_ID != ''
+        run: |
+          aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" --paths "/*"
+
+      # Smoke test API
+      - name: Smoke test API
+        run: |
+          curl -f ${{ secrets.API_BASE_URL }}/notes || exit 1

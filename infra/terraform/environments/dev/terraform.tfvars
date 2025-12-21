@@ -1,5 +1,5 @@
 # ============================================================================
-# Common Configuration (Example values for CI)
+# Common Configuration
 # ============================================================================
 
 project     = "p1-serverless-web-app"
@@ -7,30 +7,30 @@ environment = "dev"
 aws_region  = "ap-southeast-1"
 
 # ============================================================================
-# Database Module Configuration (Example)
+# Database Module Configuration
 # ============================================================================
 
 tables = {
-	notes = {
-		billing_mode                = "PAY_PER_REQUEST"
-		table_class                 = "STANDARD_INFREQUENT_ACCESS"
-		hash_key                    = "pk"
-		range_key                   = "sk"
-		attributes = [
-			{ name = "pk", type = "S" },
-			{ name = "sk", type = "S" }
-		]
-		deletion_protection_enabled = false
-		ttl_attribute               = "ttl"
-		on_demand_throughput = {
-			max_read_request_units  = 2
-			max_write_request_units = 2
-		}
-	}
+  notes = {
+    billing_mode                = "PAY_PER_REQUEST"
+    table_class                 = "STANDARD_INFREQUENT_ACCESS"
+    hash_key                    = "pk"
+    range_key                   = "sk"
+    attributes = [
+      { name = "pk", type = "S" },
+      { name = "sk", type = "S" }
+    ]
+    deletion_protection_enabled = false
+    ttl_attribute               = "ttl"
+    on_demand_throughput = {
+      max_read_request_units  = 2
+      max_write_request_units = 2
+    }
+  }
 }
 
 # ============================================================================
-# Auth Module Configuration (Example)
+# Auth Module Configuration
 # ============================================================================
 
 cognito_tier             = "LITE"
@@ -41,7 +41,7 @@ callback_urls            = ["http://localhost:3000/api/auth/callback/cognito"]
 logout_urls              = ["http://localhost:3000"]
 
 # ============================================================================
-# Hosting Module Configuration (Example)
+# Hosting Module Configuration
 # ============================================================================
 
 # S3
@@ -55,8 +55,8 @@ domain_aliases      = ["p1-dev.fikri.dev"]
 price_class         = "PriceClass_100"
 default_root_object = "index.html"
 
-# WAF (optional)
-enable_waf      = true
+# WAF (disabled by default in dev)
+enable_waf      = true 
 waf_rate_limit  = 100
 web_acl_id      = null
 

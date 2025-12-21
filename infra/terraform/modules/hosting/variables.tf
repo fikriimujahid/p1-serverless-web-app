@@ -26,11 +26,6 @@ variable "domain_name" {
   description = "Root domain name (e.g., example.com). Optional when no domain aliases are set."
   type        = string
   default     = null
-
-  validation {
-    condition     = var.domain_name != null || length(var.domain_aliases) == 0
-    error_message = "When 'domain_aliases' is non-empty, 'domain_name' must be provided."
-  }
 }
 
 # =============================================================================
@@ -140,11 +135,6 @@ variable "enable_logging" {
   description = "Enable CloudFront access logging"
   type        = bool
   default     = false
-
-  validation {
-    condition     = var.enable_logging == false || (var.logging_bucket != null && var.logging_bucket != "")
-    error_message = "When 'enable_logging' is true, 'logging_bucket' must be provided to store CloudFront access logs."
-  }
 }
 
 variable "logging_bucket" {

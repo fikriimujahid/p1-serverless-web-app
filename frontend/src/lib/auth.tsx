@@ -16,7 +16,13 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: env.region });
 
-function decodeJWT(token: string): Record<string, any> {
+type DecodedToken = {
+  email?: unknown;
+  sub?: unknown;
+  [key: string]: unknown;
+};
+
+function decodeJWT(token: string): DecodedToken {
   const base64Url = token.split('.')[1];
   const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
   const jsonPayload = decodeURIComponent(
@@ -43,10 +49,17 @@ export function useAuth(): AuthContextType {
     if (token) {
       try {
         const decoded = decodeJWT(token);
+        const email = typeof decoded.email === 'string' ? decoded.email : null;
+        const userId = typeof decoded.sub === 'string' ? decoded.sub : null;
+
+        if (!email || !userId) {
+          throw new Error('Decoded token missing required claims');
+        }
+
         setIdToken(token);
         setUser({
-          email: decoded.email,
-          userId: decoded.sub,
+          email,
+          userId,
         });
         setIsAuthenticated(true);
       } catch (error) {
@@ -97,11 +110,17 @@ export function useAuth(): AuthContextType {
       localStorage.setItem('idToken', token);
       setIdToken(token);
       const decoded = decodeJWT(token);
-      if (isDev) console.log('👤 Decoded User:', { email: decoded.email, userId: decoded.sub });
-      
+      const decodedEmail = typeof decoded.email === 'string' ? decoded.email : null;
+      const decodedUserId = typeof decoded.sub === 'string' ? decoded.sub : null;
+      if (isDev) console.log('👤 Decoded User:', { email: decodedEmail, userId: decodedUserId });
+
+      if (!decodedEmail || !decodedUserId) {
+        throw new Error('Decoded token missing required claims');
+      }
+
       setUser({
-        email: decoded.email,
-        userId: decoded.sub,
+        email: decodedEmail,
+        userId: decodedUserId,
       });
       setIsAuthenticated(true);
     } catch (error) {

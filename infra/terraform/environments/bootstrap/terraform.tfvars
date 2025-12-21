@@ -1,0 +1,5 @@
+project                = "p1-serverless-web-app"
+aws_region             = "ap-southeast-1"
+terraform_state_bucket = "terraform-731099197523"
+terraform_locks_table  = "terraform-locks"
+github_repo            = "fikriimujahid/p1-serverless-web-app"

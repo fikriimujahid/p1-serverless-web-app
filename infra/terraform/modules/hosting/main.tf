@@ -208,6 +208,67 @@ resource "aws_cloudfront_origin_access_control" "website" {
   signing_protocol                  = "sigv4"
 }
 
+# Lambda@Edge function to rewrite directory requests to index.html
+resource "aws_lambda_function" "cloudfront_rewrite" {
+  provider      = aws.us_east_1
+  filename      = data.archive_file.lambda_zip.output_path
+  function_name = "${var.bucket_name}-cf-rewrite"
+  role          = aws_iam_role.lambda_edge_role.arn
+  handler       = "index.handler"
+  runtime       = "python3.12"
+  publish       = true
+
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+}
+
+# Archive the Lambda function code
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  output_path = "/tmp/lambda_rewrite.zip"
+
+  source {
+    content  = <<-EOT
+def handler(event, context):
+    request = event['Records'][0]['cf']['request']
+    uri = request['uri']
+    
+    # If URI ends with /, append index.html
+    if uri.endswith('/'):
+        request['uri'] = uri + 'index.html'
+    # If URI has no extension and doesn't end with /, append /index.html
+    elif '.' not in uri.split('/')[-1]:
+        request['uri'] = uri + '/index.html'
+    
+    return request
+EOT
+    filename = "index.py"
+  }
+}
+
+# IAM role for Lambda@Edge
+resource "aws_iam_role" "lambda_edge_role" {
+  name = "${var.bucket_name}-lambda-edge-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = ["lambda.amazonaws.com", "edgelambda.amazonaws.com"]
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+# Attach basic Lambda policy
+resource "aws_iam_role_policy_attachment" "lambda_basic" {
+  role       = aws_iam_role.lambda_edge_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "website" {
   enabled             = true
@@ -233,6 +294,13 @@ resource "aws_cloudfront_distribution" "website" {
 
     # Use managed cache policy for best practices
     cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # CachingOptimized
+
+    # Lambda@Edge function to rewrite directory requests
+    lambda_function_association {
+      event_type   = "origin-request"
+      lambda_arn   = aws_lambda_function.cloudfront_rewrite.qualified_arn
+      include_body = false
+    }
 
     # Security headers via response headers policy
     # response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id

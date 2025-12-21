@@ -8,7 +8,7 @@ const service = new NotesService();
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-    // Handle CORS preflight
+    // Handle CORS preflight request
     if (event.httpMethod === 'OPTIONS') {
       return responseFormatter.success({}, 200);
     }

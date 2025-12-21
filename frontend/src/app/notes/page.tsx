@@ -3,14 +3,19 @@
 import React from 'react';
 import Link from 'next/link';
 import { useNotes } from '@/hooks/useNotes';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
-export default function NotesPage() {
+function NotesPageContent() {
   const { notes, isLoading, error, deleteNote, isDeleting } = useNotes();
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div
+          className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+          role="status"
+          aria-label="Loading notes"
+        ></div>
       </div>
     );
   }
@@ -49,7 +54,7 @@ export default function NotesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {notes.map((note) => (
             <div key={note.id} className="bg-white p-4 rounded-lg shadow">
-              <Link href={`/notes/${note.id}`}>
+              <Link href={`/notes/edit?id=${note.id}`}>
                 <h3 className="text-lg font-semibold mb-2 hover:text-blue-600">
                   {note.title}
                 </h3>
@@ -59,7 +64,7 @@ export default function NotesPage() {
               </p>
               <div className="flex gap-2">
                 <Link
-                  href={`/notes/${note.id}`}
+                  href={`/notes/edit?id=${note.id}`}
                   className="text-blue-600 hover:underline text-sm"
                 >
                   Edit
@@ -77,5 +82,13 @@ export default function NotesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NotesPage() {
+  return (
+    <ProtectedRoute>
+      <NotesPageContent />
+    </ProtectedRoute>
   );
 }

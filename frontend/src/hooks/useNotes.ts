@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notesApi } from '@/lib/notes-api';
 import { useAuth } from '@/lib/auth';
-import type { Note, CreateNoteRequest, UpdateNoteRequest } from '@/types/note';
+import type { CreateNoteRequest, UpdateNoteRequest } from '@/types/note';
 
 export function useNotes() {
   const queryClient = useQueryClient();

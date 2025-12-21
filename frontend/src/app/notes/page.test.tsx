@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import NotesPage from './page';
@@ -12,9 +12,30 @@ vi.mock('@/hooks/useNotes', () => ({
 // Mock next/link
 vi.mock('next/link', () => {
   return {
-    default: ({ href, children }: any) => <a href={href}>{children}</a>,
+    default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
   };
 });
+
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+// Mock auth
+vi.mock('@/lib/auth', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    isLoading: false,
+    user: null,
+    idToken: null,
+    login: vi.fn(),
+    signup: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
 
 describe('NotesPage', () => {
   const mockNotes = [
@@ -53,13 +74,9 @@ describe('NotesPage', () => {
       isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: false,
-    } as any);
-
+    } as ReturnType<typeof useNotesHook.useNotes>);
     render(<NotesPage />);
-    const spinner = screen.getByText((content, element) => {
-      return element?.className?.includes('animate-spin') || false;
-    });
-    expect(spinner).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
   it('displays error message when error occurs', () => {
@@ -73,7 +90,7 @@ describe('NotesPage', () => {
       isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: false,
-    } as any);
+    } as ReturnType<typeof useNotesHook.useNotes>);
 
     render(<NotesPage />);
     expect(screen.getByText('Failed to load notes. Please try again.')).toBeInTheDocument();
@@ -90,7 +107,7 @@ describe('NotesPage', () => {
       isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: false,
-    } as any);
+    } as ReturnType<typeof useNotesHook.useNotes>);
 
     render(<NotesPage />);
     expect(screen.getByText('No notes yet')).toBeInTheDocument();
@@ -108,7 +125,7 @@ describe('NotesPage', () => {
       isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: false,
-    } as any);
+    } as ReturnType<typeof useNotesHook.useNotes>);
 
     render(<NotesPage />);
     expect(screen.getByText('Test Note 1')).toBeInTheDocument();
@@ -128,7 +145,7 @@ describe('NotesPage', () => {
       isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: false,
-    } as any);
+    } as ReturnType<typeof useNotesHook.useNotes>);
 
     render(<NotesPage />);
     const newNoteButton = screen.getByRole('link', { name: /new note/i });
@@ -147,7 +164,7 @@ describe('NotesPage', () => {
       isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: false,
-    } as any);
+    } as ReturnType<typeof useNotesHook.useNotes>);
 
     render(<NotesPage />);
     const editLinks = screen.getAllByRole('link', { name: /edit/i });
@@ -169,7 +186,7 @@ describe('NotesPage', () => {
       isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: false,
-    } as any);
+    } as ReturnType<typeof useNotesHook.useNotes>);
 
     render(<NotesPage />);
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
@@ -189,7 +206,7 @@ describe('NotesPage', () => {
       isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: true,
-    } as any);
+    } as ReturnType<typeof useNotesHook.useNotes>);
 
     render(<NotesPage />);
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
@@ -223,7 +240,7 @@ describe('NotesPage', () => {
       isUpdating: false,
       deleteNote: mockDeleteNote,
       isDeleting: false,
-    } as any);
+    } as ReturnType<typeof useNotesHook.useNotes>);
 
     render(<NotesPage />);
     const contentElement = screen.getByText((content, element) => {

@@ -1,14 +1,16 @@
 name: Infra Plan & Apply
 on:
   pull_request:
-    branches: [dev, staging, main]
+    branches: [dev]
     paths: ["infra/**"]
   push:
-    branches: [dev, staging, main]
-    paths: ["infra/**"]
+    branches: [dev]
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   TF_IN_AUTOMATION: true
+permissions:
+  id-token: write
+  contents: read
 jobs:
   plan:
     if: github.event_name == 'pull_request'
@@ -19,30 +21,46 @@ jobs:
         with:
           role-to-assume: ${{ github.base_ref == 'main' && secrets.AWS_PROD_ROLE_ARN || (github.base_ref == 'staging' && secrets.AWS_STAGING_ROLE_ARN || secrets.AWS_DEV_ROLE_ARN) }}
           aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
+          role-session-name: github-actions-plan
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.6
+          terraform_version: 1.12.1
       - run: |
-          cd infra/terraform/environments/${{ github.base_ref == 'main' || (github.base_ref == 'staging' && 'staging' || 'dev') }}
-          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="dynamodb_table=${{ secrets.TF_STATE_TABLE }}"
-          terraform fmt -check
-          terraform plan -out=tfplan
-      - run: terraform show -json tfplan > tfplan.json
+          cd infra/terraform/environments/${{ github.base_ref == 'main' && 'prod' || (github.base_ref == 'staging' && 'staging' || 'dev') }}
+          terraform init -backend-config=backend.hcl
+          VAR_FILE=""
+          if [ -f terraform.tfvars ]; then VAR_FILE="-var-file=terraform.tfvars"; fi
+          terraform plan $VAR_FILE -out=tfplan
+          terraform show -json tfplan > tfplan.json
   apply:
-    needs: plan
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
+    environment: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
     steps:
       - uses: actions/checkout@v4
+      - name: Debug OIDC token claims
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = await core.getIDToken('sts.amazonaws.com');
+            const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+            core.info(`OIDC aud: ${claims.aud}`);
+            core.info(`OIDC sub: ${claims.sub}`);
+            core.info(`OIDC ref: ${claims.ref}`);
+            core.info(`OIDC repository: ${claims.repository}`);
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ github.ref_name == 'main' && secrets.AWS_PROD_ROLE_ARN || (github.ref_name == 'staging' && secrets.AWS_STAGING_ROLE_ARN || secrets.AWS_DEV_ROLE_ARN) }}
           aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
+          role-session-name: github-actions-apply
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.6
+          terraform_version: 1.12.1
       - run: |
-          cd infra/terraform/environments/${{ github.ref_name == 'main' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
-          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
-          terraform apply -auto-approve tfplan || terraform apply -auto-approve
+          cd infra/terraform/environments/${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
+          terraform init -backend-config=backend.hcl
+          VAR_FILE=""
+          if [ -f terraform.tfvars ]; then VAR_FILE="-var-file=terraform.tfvars"; fi
+          terraform apply -auto-approve $VAR_FILE

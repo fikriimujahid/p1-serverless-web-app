@@ -6,29 +6,34 @@ This document describes how to cut releases, promote between environments, and r
 
 ## 1) Release Cadence & Inputs
 
-- Cadence: ad hoc; recommend weekly for staging→prod once stable.
-- Inputs required per release:
-  - Target environment (`staging` or `prod`)
+- Cadence:
+  - Dev: automatic on push to `dev` branch
+  - Staging: automatic on merge to `staging` branch (after PR approval)
+  - Prod: manual via tag or workflow dispatch (requires approval)
+- Inputs required per production release:
+  - Target environment: `prod`
   - Git tag (e.g., `v1.2.0`) created from `main`
   - Change log summary (PRs included)
-  - Approver (different from author for prod)
+  - Approver (different from author)
+- Staging/dev releases are automatic after PR merge or push
 
 ---
 
 ## 2) Promotion Flow
 
 ```
-feature/* -> staging (merge PR) -> tag on main -> prod deploy
+feature/* -> dev (push) -> staging (merge PR) -> main (merge PR) -> prod deploy
 ```
 
-1. Merge feature branch into `staging` via PR after CI green.
-2. Release candidate validation in staging:
+1. Push feature branch; CI tests run in dev environment automatically.
+2. Merge feature branch into `staging` via PR after CI green.
+3. Release candidate validation in staging:
    - Backend: run integration tests against staging API Gateway.
    - Frontend: visual smoke (login, list notes, create/delete note).
    - Infra: confirm Terraform plan shows no unexpected drift.
-3. Once validated, fast-forward `main` from `staging` or cherry-pick approved commits.
-4. Tag `main` with `vX.Y.Z` (semantic version) and push tag.
-5. Trigger `Release` workflow (auto on tag or manual dispatch) targeting `prod`.
+4. Once validated, merge `staging` into `main` via PR (or fast-forward).
+5. Tag `main` with `vX.Y.Z` (semantic version) and push tag.
+6. Trigger `Release` workflow (auto on tag or manual dispatch) targeting `prod`.
 
 ---
 
@@ -87,7 +92,8 @@ feature/* -> staging (merge PR) -> tag on main -> prod deploy
 ## 6) Checklists
 
 **Before tagging:**
-- [ ] Staging tests green (backend, frontend)
+- [ ] Dev pipeline green (CI tests passed on feature/* push)
+- [ ] Staging tests green (backend, frontend, infra)
 - [ ] Terraform plan reviewed for prod
 - [ ] Release notes drafted
 - [ ] Approver available for prod deploy
