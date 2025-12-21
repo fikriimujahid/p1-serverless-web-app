@@ -188,6 +188,47 @@ Terraform state is stored remotely in S3 with DynamoDB locking to prevent concur
 - **S3 Bucket**: Stores state files
 - **DynamoDB Table**: Provides state locking
 
+## Destroying Resources
+
+To tear down the infrastructure, you need to destroy resources in the reverse order of creation:
+
+### 1. Destroy Development Environment
+
+```bash
+cd environments/dev
+
+# Using environment variable (RECOMMENDED)
+# Windows PowerShell
+$env:AWS_PROFILE="<profile-name>"; terraform destroy
+
+# Linux/Mac
+export AWS_PROFILE=<profile-name>
+terraform destroy
+
+# Windows Command Prompt
+set AWS_PROFILE=<profile-name>
+terraform destroy
+```
+
+**Note**: Terraform does not accept a `-profile` flag. You must set the `AWS_PROFILE` environment variable before running the destroy command.
+
+### 2. Destroy Bootstrap Environment (Optional)
+
+Only destroy the bootstrap environment if you want to completely remove the Terraform state backend:
+
+```bash
+cd environments/bootstrap
+
+# Windows PowerShell
+$env:AWS_PROFILE="<profile-name>"; terraform destroy
+
+# Linux/Mac
+export AWS_PROFILE=<profile-name>
+terraform destroy
+```
+
+**Warning**: Destroying the bootstrap environment will remove the S3 bucket containing your Terraform state. Make sure you have backups if needed.
+
 ## Common Commands
 
 ```bash
@@ -199,46 +240,31 @@ terraform validate
 
 # Plan changes
 terraform plan -var="aws_profile=<profile-name>"
+# OR using environment variable
+export AWS_PROFILE=<profile-name>  # Linux/Mac
+$env:AWS_PROFILE="<profile-name>"  # Windows PowerShell
+terraform plan
 
 # Apply changes
 terraform apply -var="aws_profile=<profile-name>"
+# OR using environment variable
+export AWS_PROFILE=<profile-name>  # Linux/Mac
+$env:AWS_PROFILE="<profile-name>"  # Windows PowerShell
+terraform apply
 
-# Destroy resources
-terraform destroy -var="aws_profile=<profile-name>"
+# Destroy resources (use environment variable)
+# Windows PowerShell
+$env:AWS_PROFILE="<profile-name>"; terraform destroy
+# Linux/Mac
+export AWS_PROFILE=<profile-name>
+terraform destroy
 
 # Format code
 terraform fmt -recursive
 
-# Using environment variable instead
-export AWS_PROFILE=<profile-name>  # Then run commands without -var flag
+# Show current workspace
+terraform workspace show
+
+# List all resources
+terraform state list
 ```
-
-## Best Practices
-
-1. **Never commit** `terraform.tfvars` with sensitive values
-2. Always run `terraform plan` before `apply`
-3. Use workspaces or separate state files for different environments
-4. Keep modules small and focused
-5. Document variables and outputs
-6. Use remote state for team collaboration
-
-## Troubleshooting
-
-### State Lock Issues
-If you encounter a state lock, ensure no other Terraform operations are running. If stuck, you can force-unlock:
-
-```bash
-terraform force-unlock <lock-id>
-```
-
-### Backend Initialization
-If backend configuration changes, reinitialize:
-
-```bash
-terraform init -reconfigure
-```
-
-## Additional Resources
-
-- [Terraform AWS Provider Documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [Terraform Best Practices](https://www.terraform.io/docs/cloud/guides/recommended-practices/index.html)
