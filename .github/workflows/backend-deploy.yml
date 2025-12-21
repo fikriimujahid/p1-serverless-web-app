@@ -2,7 +2,7 @@ name: Backend Deploy
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - backend/**
 
@@ -33,12 +33,28 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ github.ref_name == 'main' && secrets.AWS_PROD_ROLE_ARN || (github.ref_name == 'staging' && secrets.AWS_STAGING_ROLE_ARN || secrets.AWS_DEV_ROLE_ARN) }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
       - uses: aws-actions/setup-sam@v2
       - run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
       - run: npm run build
       - name: SAM build
         run: sam build
+      - name: Get Terraform outputs (table_name, user_pool_id)
+        id: tf-outputs
+        env:
+          ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
+        run: |
+          cd ../infra/terraform/environments/${ENV_NAME}
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="dynamodb_table=${{ secrets.TF_STATE_TABLE }}"
+          TABLE_NAME=$(terraform output -raw table_name)
+          USER_POOL_ID=$(terraform output -raw user_pool_id)
+          echo "table_name=$TABLE_NAME" >> $GITHUB_OUTPUT
+          echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
+          echo "Resolved outputs: table_name=$TABLE_NAME, user_pool_id=$USER_POOL_ID"
       - name: SAM deploy
         env:
           ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
@@ -50,4 +66,7 @@ jobs:
             --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --parameter-overrides Environment=${ENV_NAME}
+            --parameter-overrides \
+              Environment=${ENV_NAME} \
+              DynamoDBTableName=${{ steps.tf-outputs.outputs.table_name }} \
+              UserPoolId=${{ steps.tf-outputs.outputs.user_pool_id }}

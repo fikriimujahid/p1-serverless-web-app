@@ -38,29 +38,29 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       # Backend build & deploy
-      - name: Install backend deps
-        working-directory: backend
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-      - name: Build backend
-        working-directory: backend
-        run: npm run build
-      - name: SAM build (backend)
-        working-directory: backend
-        run: sam build
-      - name: SAM deploy (backend)
-        working-directory: backend
-        env:
-          ENV_NAME: ${{ inputs.env || 'prod' }}
-        run: |
-          sam deploy \
-            --stack-name "${PROJECT_NAME}-stack-${ENV_NAME}" \
-            --s3-prefix "${PROJECT_NAME}-stack-${ENV_NAME}" \
-            --resolve-s3 \
-            --capabilities CAPABILITY_IAM \
-            --no-confirm-changeset \
-            --no-fail-on-empty-changeset \
-            --parameter-overrides Environment=${ENV_NAME}
+      # - name: Install backend deps
+      #   working-directory: backend
+      #   run: |
+      #     if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      # - name: Build backend
+      #   working-directory: backend
+      #   run: npm run build
+      # - name: SAM build (backend)
+      #   working-directory: backend
+      #   run: sam build
+      # - name: SAM deploy (backend)
+      #   working-directory: backend
+      #   env:
+      #     ENV_NAME: ${{ inputs.env || 'prod' }}
+      #   run: |
+      #     sam deploy \
+      #       --stack-name "${PROJECT_NAME}-stack-${ENV_NAME}" \
+      #       --s3-prefix "${PROJECT_NAME}-stack-${ENV_NAME}" \
+      #       --resolve-s3 \
+      #       --capabilities CAPABILITY_IAM \
+      #       --no-confirm-changeset \
+      #       --no-fail-on-empty-changeset \
+      #       --parameter-overrides Environment=${ENV_NAME}
 
       # Frontend build & deploy
       - name: Create .env.local (frontend)
