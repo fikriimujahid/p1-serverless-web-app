@@ -34,8 +34,7 @@ resource "aws_s3_bucket" "website" {
   bucket = var.bucket_name
 
   tags = merge(var.tags, {
-    Name        = var.bucket_name
-    Environment = var.environment 
+    Name = var.bucket_name
   })
 }
 
@@ -346,8 +345,7 @@ resource "aws_cloudfront_distribution" "website" {
   web_acl_id = var.enable_waf ? aws_wafv2_web_acl.cloudfront[0].arn : var.web_acl_id
 
   tags = merge(var.tags, {
-    Name        = "${var.bucket_name}-cloudfront"
-    Environment = var.environment
+    Name = "${var.bucket_name}-cloudfront"
   })
 }
 

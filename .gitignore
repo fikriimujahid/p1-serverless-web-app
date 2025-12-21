@@ -49,3 +49,14 @@ jest.config.js
 # Logs
 logs
 *.log
+
+# Security scan results (local)
+security-reports/*.json
+security-reports/*.html
+semgrep-results.json
+zap-report.html
+gitleaks-report.json
+checkov-report.json
+tfsec-report.json
+.secrets.baseline
+.pre-commit-config.yaml
