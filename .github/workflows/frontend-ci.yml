@@ -1,11 +1,11 @@
 name: Frontend CI
 on:
   pull_request:
-    branches: [staging, main]
+    branches: [dev]
     paths: ["frontend/**"]
-  push:
-    branches: ["feature/**"]
-    paths: ["frontend/**"]
+  # push:
+  #   branches: ["feature/**"]
+  #   paths: ["frontend/**"]
 jobs:
   frontend-ci:
     runs-on: ubuntu-latest
