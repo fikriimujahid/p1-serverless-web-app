@@ -48,8 +48,8 @@ jobs:
         env:
           ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
         run: |
-          cd ../infra/terraform/environments/${ENV_NAME}
-          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="dynamodb_table=${{ secrets.TF_STATE_TABLE }}"
+          cd ../infra/terraform/environments/${ENV_NAME} 
+          terraform init -backend-config=backend.hcl
           TABLE_NAME=$(terraform output -raw table_name)
           USER_POOL_ID=$(terraform output -raw user_pool_id)
           echo "table_name=$TABLE_NAME" >> $GITHUB_OUTPUT
