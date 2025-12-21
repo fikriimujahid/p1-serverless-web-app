@@ -1,0 +1,6 @@
+10021	WARN	(X-Content-Type-Options Header Missing)
+10023	WARN	(Information Disclosure - Debug Error Messages)
+10027	WARN	(Information Disclosure - Suspicious Comments)
+10096	WARN	(Timestamp Disclosure)
+10098	WARN	(Cross-Domain Misconfiguration)
+10202	WARN	(Absence of Anti-CSRF Tokens)

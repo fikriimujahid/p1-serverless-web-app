@@ -184,7 +184,7 @@ Assume variables:
     "items": [
       { "id": "n_01H...", "title": "First", "content": "...", "tags": ["work"], "createdAt": "2025-01-01T10:00:00Z", "updatedAt": "2025-01-01T10:00:00Z" }
     ],
-    "nextToken": "eyJwYWdlIjoxfQ=="
+    "nextToken": ""
   }
   ```
 

@@ -1,0 +1,66 @@
+name: Dependency Scan
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # schedule:
+  #   - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  backend-dependencies:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+      
+      - name: Snyk Security Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --severity-threshold=high --file=backend/package.json
+
+  frontend-dependencies:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+      
+      - name: Snyk Security Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --severity-threshold=high --file=frontend/package.json

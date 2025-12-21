@@ -186,7 +186,7 @@
 
 ### What you do
 
-* Add security scanning
+* Add security scanning (secrets, dependencies, IaC, SAST, DAST)
 * Secret management
 * Implement DR mechanisms
 
@@ -200,10 +200,24 @@
 
 📄 **`docs/06-devsecops.md`**
 
-| Layer      | Tool                | Purpose       |
-| ---------- | ------------------- | ------------- |
-| Pre-commit | detect-secrets      | Prevent leaks |
-| CI         | IAM role assumption | Secure deploy |
+| Scan Type           | Tool              | Target                    | Frequency   |
+| ------------------- | ----------------- | ------------------------- | ----------- |
+| Secrets Scanning    | Gitleaks          | All files                 | Every PR    |
+| Dependency Scanning | npm audit + Snyk  | package.json              | PR + Weekly |
+| IaC Security        | Checkov + TFSec   | Terraform files           | PR (infra)  |
+| SAST                | Semgrep           | Source code               | Every PR    |
+| DAST                | OWASP ZAP         | Running application       | Weekly      |
+
+📁 **`.github/workflows/security-*.yml`**
+
+* Automated security scanning in CI/CD
+* No pre-commit hooks (CI-based approach)
+
+📄 **`guide/06-local-security-scans.md`**
+
+* Step-by-step local scanning guide
+* Combined report generation
+* Tool installation and usage
 
 📄 **`docs/06-dr.md`**
 
@@ -215,6 +229,7 @@
 
 * What happens if data is deleted?
 * Can I explain this to a security reviewer?
+* Are all security scans passing in CI?
 
 ---
 
