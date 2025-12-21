@@ -56,8 +56,16 @@ jobs:
         if: steps.stack-check.outputs.exists == 'false'
         env:
           ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
+          TABLE_NAME: ${{ secrets.TABLE_NAME }}
+          USER_POOL_ID: ${{ secrets.USER_POOL_ID }}
         run: |
-          echo "SAM_PARAMETER_OVERRIDES=--parameter-overrides Environment=${ENV_NAME} DynamoDBTableName=${{ secrets.TABLE_NAME }} UserPoolId=${{ secrets.USER_POOL_ID }}" >> $GITHUB_ENV
+          if [[ -z "$TABLE_NAME" || -z "$USER_POOL_ID" ]]; then
+            echo "❌ Error: TABLE_NAME or USER_POOL_ID secrets are not set in the '${ENV_NAME}' environment"
+            echo "Please add these secrets to the GitHub Environment: Settings → Environments → ${ENV_NAME} → Secrets"
+            exit 1
+          fi
+          echo "✅ Resolved secrets: TABLE_NAME=${TABLE_NAME}, USER_POOL_ID=${USER_POOL_ID}"
+          echo "SAM_PARAMETER_OVERRIDES=--parameter-overrides Environment=${ENV_NAME} DynamoDBTableName=${TABLE_NAME} UserPoolId=${USER_POOL_ID}" >> $GITHUB_ENV
       - name: SAM deploy
         env:
           ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || (github.ref_name == 'staging' && 'staging' || 'dev') }}
